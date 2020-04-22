@@ -1,0 +1,59 @@
+body {
+	background-color: black;
+	color: #ddd;
+	font-size: 12px;
+}
+
+#guiCommunity {
+	margin: 2%;
+}
+
+.aspect {
+	display: inline-block;
+	width: 12%;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	margin-left: 1%;
+	margin-right: 1%;
+	height: 120px;
+}
+
+.aspect div.header {
+	font-size: 140%;
+	text-align: center;
+	font-weight: bold;
+	margin-top: 6px;
+	margin-bottom: 6px;
+}
+
+.bar {
+	border: 1px solid transparent;
+	width: 60%;
+	height: 20px;
+	margin: auto;
+	margin-top: 12px;
+	background-color: #333;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.bar span {
+	display: inline-block;
+	height: 18px;
+}
+
+.bar span.b0 {
+	background-color: transparent;
+}
+
+.bar span.b1 {
+	background-color: red;
+}
+
+.bar span.b2 {
+	background-color: white;
+}
+
+.bar span.b3 {
+	background-color: green;
+}
