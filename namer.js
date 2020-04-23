@@ -251,46 +251,57 @@ class NameProcessor {
 	}
 };
 
-function makeGnomeNames(nameList) {
-	let n = new NameProcessor(nameList);
-	n
+class Maker {
+	constructor(id,makeFn) {
+		this.id = id;
+		this.makeFn = makeFn;
+		this.result = null;
+	}
+	make(...args) {
+		return this.makeFn(...args);
+	}
+	toJsonByGender( nameListFirst ) {
+		let male   = new NameProcessor(nameFirstList).filter( name => name.male );
+		let female = new NameProcessor(nameFirstList).filter( name => name.female );
+
+		let s = '{\nmale: [\n$MALE$\n],\nfemale: [\n$FEMALE$\n]\n}';
+		s = s.replace( '$FEMALE$', female.composite( name => "'"+name.nameFirst+"'" ).join(',\n') );
+		s = s.replace( '$MALE$',     male.composite( name => "'"+name.nameFirst+"'" ).join(',\n') );
+
+		return 'Name.'+id+' = '+s;
+	}
+};
+
+Maker.gnome = new Maker( 'gnome', (nameFirstList) => {
+	let np = new NameProcessor(nameFirstList);
+	np
 		.filter( name => name.hasCountry('KR') )
 		.convert( [/y/g,'th'], [/Y/g,'Th'], [/o/g,'y'], [/ng/g,'nk'], [/u/g,'a'], [/w/g,'o'], [/ae/g,'ow'], [/i/g, 'ar'] )
 		.sort()
 	;
-	return n;
-}
+	return this.result = np.result;
+});
 
-function makeHumanNames(nameList) {
-	let n = new NameProcessor(nameList);
-	n
+Maker.human = new Maker( 'human', (nameFirstList) => {
+	let np = new NameProcessor(nameFirstList);
+	np
 		.filter( name => name.hasCountry('GB') )
 		.sort()
 	;
-	return n;
-}
+	return this.result = np.result;
+});
 
-function toArrayByGender(nameList) {
-	let male   = new NameProcessor(nameList).filter( name => name.male );
-	let female = new NameProcessor(nameList).filter( name => name.female );
-
-	let s = '{\nmale: [\n$MALE$\n],\nfemale: [\n$FEMALE$\n]\n}';
-	s = s.replace( '$FEMALE$', female.composite( name => "'"+name.nameFirst+"'" ).join(',\n') );
-	s = s.replace( '$MALE$',     male.composite( name => "'"+name.nameFirst+"'" ).join(',\n') );
-
-	return s;
-}
+function gather
 
 function main() {
 	let nameParser = new NameParser();
-	let nameList = nameParser.parseFile('namerData.txt',null);
+	let nameFirstList = nameParser.parseFile('namesFirst.txt',null);
 	//nameParser.stats();
 
-	let gnomeNames = makeGnomeNames(nameList);
+	//Maker.gnome.make(nameFirstList);
 	//console.log( 'Name.gnome = '+toArrayByGender( gnomeNames.nameList ) );
 
-	let humanNames = makeHumanNames(nameList);
-	console.log( 'Name.human = '+toArrayByGender( humanNames.nameList ) );
+	console.log( Maker.toJsonByGender( Maker.human.make(nameFirstList) ) );
 
 }
 

@@ -45,6 +45,8 @@ class CultureBase {
 		this.spouseAgeRange = 8;
 		this.centroidAge = 25;
 
+		this.populationPercentWomen = 0.55;
+
 	}
 	marryable(p) {
 		return !p.spouse && p.age > this.marryingAge;
@@ -73,7 +75,7 @@ class CultureBase {
 		return surname;
 	}
 	generateGender() {
-		return Math.fChance(0.60) ? 'F' : 'M'; //['M','F'][Math.randInt(0,2)];
+		return Math.fChance(this.populationPercentWomen) ? 'F' : 'M'; //['M','F'][Math.randInt(0,2)];
 	}
 	generateSkill() {
 		let chanceForSpazz = 0.3;
