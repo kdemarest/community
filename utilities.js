@@ -52,6 +52,7 @@ Module.add('utilities',function(){
 		while( p[1].length < decimals ) p[1]+='0';
 		return p[0]+'.'+p[1].substr(0,decimals);
 	}
+	// Takes a number 0.0 to 1.0
 	Math.percent = function(value,decimals=0) {
 		let p = 100*Math.pow(10,decimals);
 		let n = '            '+Math.floor(value*p);
@@ -67,6 +68,9 @@ Module.add('utilities',function(){
 			}
 		}
 		return roman;
+	}
+	String.validGender = function(s) {
+		return s=='M' || s=='F';
 	}
 	String.splice = function(str, start, delCount, newSubStr) {
         return str.slice(0, start) + newSubStr + str.slice(start + Math.abs(delCount));
@@ -671,16 +675,26 @@ Module.add('utilities2',function() {
 
 
 	class ListManager {
-		constructor() {
+		constructor(validatorFn = null) {
 			this.list = [];
+			this.validatorFn = validatorFn;
 		}
 		get length() {
 			return this.list.length;
 		}
 		add( element ) {
 			console.assert( element );
+			if( this.validatorFn ) {
+				this.validatorFn(element);
+			}
 			this.list.push( element );
 			return element;
+		}
+		remove( fn ) {
+			return Array.filterInPlace( this.list, fn );
+		}
+		map( fn ) {
+			return this.list.map( fn );
 		}
 		find( fn ) {
 			return this.list.find( fn );
@@ -692,9 +706,13 @@ Module.add('utilities2',function() {
 		get finder() {
 			return new Finder(this.list);
 		}
+		count(fn) {
+			return this.sum( element => fn(element) ? 1 : 0 );
+		}
 		sum(fn) {
 			let total = 0;
 			this.traverse( element => total += fn(element) );
+			console.assert( Number.isFinite(total) );
 			return total;
 		}
 		reduce(fn) {

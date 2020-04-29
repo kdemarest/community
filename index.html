@@ -12,12 +12,27 @@
 <script src="utilPick.js" charset="utf-8"></script>
 <script src="time.js" charset="utf-8"></script>
 
-<script src="dataHumanNames.js" charset="utf-8"></script>
+<script src="dataNames.js" charset="utf-8"></script>
 <script src="dataCulture.js" charset="utf-8"></script>
 <script src="dataAspect.js" charset="utf-8"></script>
 
+<script src="cBuilder.js" charset="utf-8"></script>
+
+<script src="person.js" charset="utf-8"></script>
+<script src="venue.js" charset="utf-8"></script>
+<script src="household.js" charset="utf-8"></script>
+<script src="aspect.js" charset="utf-8"></script>
+<script src="community.js" charset="utf-8"></script>
+
 <script src="views.js" charset="utf-8"></script>
 <script src="gui.js" charset="utf-8"></script>
+
+<script src="visual.js" charset="utf-8"></script>
+<script src="panelMorale.js" charset="utf-8"></script>
+<script src="panelWellbeing.js" charset="utf-8"></script>
+<script src="panelProductivity.js" charset="utf-8"></script>
+
+<script src="dataFeed.js" charset="utf-8"></script>
 
 <script>
 
@@ -42,747 +57,143 @@ for( let i=0 ; i<80 ; ++i ) {
 }
 */
 
-class Person {
-	constructor(culture,jobType,workplace,inject) {
-		console.assert( culture && jobType && workplace );
-		this.isPerson	= true;
-		this.culture	= culture;
-		this.jobType	= jobType;
-		this.id			= Date.makeUid();
-		this.workplace	= workplace;
-		workplace.workerAdd(this);
-		this.age		= culture.generateAge(jobType.isChild);
-		this.gender		= culture.generateGender();
-		this.nameFirst	= String.capitalize( this.culture.generateName(this.gender) );
-		this.skill		= this.culture.generateSkill();
-		this.disabled	= false;
-		console.assert( this.skill >=0 && this.skill <=3 );
-		Object.assign( this, inject );
-		if( this.isFemale ) {
-			this._childList = this._childList || [];
-			let maxChildren = Math.clamp( this.age-culture.marryingAge, 0, 4 );
-			this.nominalChildren = maxChildren; //Math.randInt( 0, maxChildren );
-		}
-	}
-	get family() {
-		console.assert(false);
-	}
-	get allowAnotherKid() {
-		console.assert( this.isFemale );
-		return this.childList.length < this.nominalChildren;
-	}
-	canBeMotherOf(kid) {
-		return (
-			this !== kid &&
-			this.isFemale &&
-			this.age > kid.age+this.culture.marryingAge &&
-			this.age < this.culture.menopauseAge+kid.age &&
-			this.allowAnotherKid
-		);
-	}
-	canBeHusbandOf(wife) {
-		return (
-			wife !== this &&
-			this.gender=='M' &&
-			!this.spouse &&
-			!this.isSiblingOf(wife) &&
-			this.culture.marryable(this) &&
-			this.culture.spouseAgeMatch(this,wife)
-		);
-	}
-	set mother(m) {
-		console.assert( m instanceof Person );
-		this._mother = m;
-		m.childList.push(this);
-	}
-	get mother() {
-		return this._mother;
-	}
-	get father() {
-		return this._mother ? this._mother.spouse : null;
-	}
-	set spouse(person) {
-		console.assert( person instanceof Person );
-		console.assert( !this.spouse );
-		console.assert( !person.spouse );
-		console.assert( this.age >= this.culture.marryingAge );
-		console.assert( person.age >= this.culture.marryingAge );
-		this._spouse = person;
-		person._spouse = this;
-	}
-	get spouse() {
-		return this._spouse;
-	}
-	get isSingle() {
-		return !this.isMinor && !this.spouse;
-	}
-	get husband() {
-		return this.isFemale ? this.spouse : null;
-	}
-	get wife() {
-		return this.isMale ? this.spouse : null;
-	}
-	isSiblingOf(person) {
-		return this.mother && this.mother.childList.includes( person );
-	}
-	get parentTitle() {
-		return this.isFemale ? 'mother' : 'father';
-	}
-	get isOrphan() {
-		if( !this.isMinor ) {
-			return false;
-		}
-		let motherDead = !this.mother ? false : this.mother.isDead;
-		let fatherDead = !this.father ? false : this.father.isDead;
-		return motherDead && fatherDead;
-	}
-	set household(h) {
-		h.memberList.push( this );
-		this._household = h;
-		console.log('Add '+this.nameSummary+' to household '+h.text);
-	}
-	get household() {
-		return this._household;
-	}
 
-	get isDead() {
-		return this.dead;
+Aspect.Event = class {
+	constructor(data) {
+		Object.assign( this, data );
+		this.isFirstDay = true;
 	}
-	get isAlive() {
-		return !this.isDead;
+	destroy() {
+		this.dead = true;
+		if( this.onDestroy ) {
+			this.onDestroy.call(this);
+		}
 	}
-	get isMarried() {
-		return this.spouse;
-	}
-	get siblingList() {
-		console.assert( this.mother );
-		return this.mother.childList;
-	}
-	get isMinor() {
-		return this.age < this.culture.ageOfMajority;
-	}
-	get text() {
-		if( this.isDead ) {
-			let s = 'Dead person: '+this.nameSummaryFull;
-			if( this.isFemale ) {
-				s += ' '+this.parentTitle+' of '+this.childCount;
+	tickDay() {
+		if( this.isFirstDay ) {
+			if( this.actionFirst ) {
+				this.actionFirst.call(this);
 			}
-			else {
-				s += ' husband of '+this.spouse.nameSummary;
-			}
-			return s;
+			this.isFirstDay = false
+			if( this.dead ) return;
 		}
-		return 'Person: '+this.nameSummaryFull+' the s'+this.skill+' '+this.jobType.id+(this.isCalledBoss?' (boss)':'')+', produces '+this.production+' '+this.produces.id;
-	}
-	get isCalledBoss() {
-		return this.isBoss && this.workplace.workerCount>1;
-	}
-	get name() {
-		return this.nameFirst;
-	}
-	get nameLast() {
-		return this.surname;
-	}
-	get nameFull() {
-		return this.nameFirst+(this.nameLast ? ' '+this.nameLast : '');
-	}
-	get nameMaiden() {
-		if( !this.isWife || !this.father ) {
-			return;
+		if( this.onTick ) {
+			this.onTick.call(this);
 		}
-		return this.father.surname;
-	}
-	get isWidow() {
-		return this.isFemale && this.spouse && this.spouse.isDead;
-	}
-	get isWidower() {
-		return this.isMale && this.spouse && this.spouse.isDead;
-	}
-	get casualTitle() {
-		if( this.isOrphan ) {
-			return 'orphan';
-		}
-		if( this.isWidow ) {
-			return  'widow';
-		}
-		if( this.isWidower ) {
-			return  'widower';
-		}
-		if( this.isDead && !this.mother && this.isMale ) {
-			return 'patriarch';
-		}
-		if( this.isDead ) {
-			return 'ancestor';
-		}
-		if( this.isHusband ) {
-			return 'husband';
-		}
-		if( this.isWife ) {
-			return 'wife';
-		}
-		if( this.age < 3 ) {
-			return 'baby';
-		}
-		if( this.age < 7 ) {
-			return 'toddler';
-		}
-		if( this.isGrandfather ) {
-			return 'grandpa';
-		}
-		if( this.isGrandmother ) {
-			return 'gramma';
-		}
-
-		return '';
-	}
-	_nameSummaryMake(andLast) {
-		let maidenName = this.nameMaiden;
-		let title = this.casualTitle;
-		return (title?title+' ':'')+
-			this.nameFirst+
-			(andLast ? ' '+this.nameLast+(maidenName ? ' (nee '+maidenName+')' : '') : '' )+
-			' '+this.gender+this.age
-		;
-	}
-	get nameSummary() {
-		return this._nameSummaryMake();
-	}
-	get nameSummaryFull() {
-		return this._nameSummaryMake(true);
-	}
-	get oppositeGender() {
-		return {M:'F',F:'M'}[this.gender];
-	}
-	get isMale() {
-		return this.gender == 'M';
-	}
-	get isFemale() {
-		return this.gender == 'F';
-	}
-	get isHusband() {
-		return this.isMale && this.spouse;
-	}
-	get isWife() {
-		return this.isFemale && this.spouse;
-	}
-	get isGrandfather() {
-		if( !this.isMale || this.childCount==0 ) {
-			return false;
-		}
-		return this.childList.find( child => child.childCount );
-	}
-	get isGrandmother() {
-		if( !this.isFemale || this.childCount==0 ) {
-			return false;
-		}
-		return this.childList.find( child => child.childCount );
-	}
-	get isChild() {
-		return this.jobType.isChild;
-	}
-	get childTitle() {
-		return this.isMale ? 'son' : 'daughter';
-	}
-	get childCount() {
-		return this.childList.length;
-	}
-	get childList() {
-		return this.isFemale ? this._childList : this.spouse ? this.spouse.childList : [];
-	}
-	get hasMinorChildren() {
-		return this.childList.find( child => child.isMinor );
-	}
-	get workplaceType() {
-		return this.jobType.placeType;
-	}
-	get produces() {
-		return this.jobType.produces;
-	}
-	get production() {
-		let skillBonus = [0.7,1,1.4,1.8];
-		return Math.floor( this.jobType.peopleServed * skillBonus[this.skill] );
 	}
 }
 
-class PersonList extends ListManager {
-	constructor() {
+
+
+class ViewPanel extends ViewObserver {
+	constructor(divId,makeComponentFn) {
 		super();
-	}
-}
-
-
-class Place {
-	constructor( type, workerCapacity ) {
-		console.assert( type && PlaceTypeHash[type.id] && workerCapacity );
-		Object.assign( this, type );
-		this.isPlace	= true;
-		this.type		= type;
-		this.id			= type.id+'.'+Date.makeUid();
-		this.workerCapacity	= workerCapacity;
-		this.workerHash	= new HashManager();
-	}
-	get name() {
-		let sizeName = ['small','medium','large','huge'][Math.min(3,Math.floor(Math.sqrt(1+this.workerCapacity))-1)];
-		return sizeName+' '+this.type.id;
-	}
-	get text() {
-		return this.name+' is '+Math.percent(this.percentWorkerCapacity)+'% worked by '+Array.joinAnd(this.workerNameArray)
-	}
-	get workerNameArray() {
-		let nameList = [];
-		this.workerHash.traverse( worker=>nameList.push(worker.name+' the '+worker.jobType.name) );
-		return nameList;
-	}
-	get workerArray() {
-		return Object.values(this.workerHash.hash);
-	}
-	workerAdd(person) {
-		this.workerHash.hash[person.id] = person;
-	}
-	get workerCount() {
-		return this.workerHash.count;
-	}
-	get percentWorkerCapacity() {
-		return this.workerCount / this.workerCapacity;
-	}
-	get adequatelyStaffed() {
-		return this.percentWorked >= 0.80;
-	}
-}
-
-class PlaceList extends ListManager {
-	constructor() {
-		super();
-	}
-	peopleServed(aspectTypeId) {
-		let peopleSatisfied = this.sum( place => place.produces.id == aspectTypeId ? place.workerCount : 0 );
-		return peopleSatisfied;
-	}
-}
-
-class Household {
-	constructor() {
-		this.isHousehold = true;
-		this.memberList = [];
-	}
-	get head() {
-		if( this.memberList.length == 1 ) {
-			return this.memberList[0];
-		}
-		let person = this.memberList.find( person => person.isAlive && person.isHusband && !person.isWidower );
-		if( !person ) {
-			person = this.memberList.find( person => person.isAlive && person.isWife  && !person.isWidow );
-		}
-		if( !person ) {
-			person = this.memberList[0];
-			this.memberList.forEach( p => person = p.age > person.age ? p : person );
-		}
-		console.assert( person );
-		return person;
-	}
-	get memberCount() {
-		return this.memberList.length;
-	}
-	get surname() {
-		return this.memberList.length ? this.memberList[0].surname : 'noNameYet';
-	}
-	get title() {
-		if( this.head.isSingle && this.memberCount > 1 ) {
-			return 'friends';
-		}
-		return this.head.nameFirst+' '+this.surname;
-	}
-	get text() {
-		let s = '';
-		s = this.title+' home: '+Array.joinAnd( this.memberList.map( member => member.nameSummary ) );
-		if( this.memberCount == 1 ) {
-			let head = this.head;
-			if( !head.spouse ) {
-				s += ' unmarried';
-			}
-			if( head.mother.isAlive || head.father.isAlive ) {
-				s += ' ('+head.childTitle+' of '+head.father.nameSummary+' and '+head.mother.nameSummary+')';
-			}
-		}
-		return s;
-	}
-}
-
-class CommunityBuilder {
-	constructor(community) {
-		this.community = community;
-		this.stockList = {};
-		this.placesDesired = {};
-		this.population = null;
-	}
-	get placeList() {
-		return this.community.placeList;
-	}
-	get personList() {
-		return this.community.personList;
-	}
-
-	makeHusbandOf(person) {
-		let place   = this.placeList.pick();
-		let jobType = new Finder( place.jobTypeHash ).pick();
-		let husband = new Person( person.culture, jobType, place, {
-			gender: 'M',
-			age: Math.randInt( Math.max(person.age-8,person.culture.marryingAge), person.age+8 ),
-			dead: true	// Someday we might let this person live by exist elsewhere
-		});
-		this.personList.add( husband );
-		return husband;
-	}
-
-	makeMotherOf(person) {
-		let place   = this.placeList.pick();
-		let jobType = new Finder( place.jobTypeHash ).pick();
-		let mother = new Person( person.culture, jobType, place, {
-			gender: 'F',
-			age: Math.randInt( person.age+person.culture.marryingAge, person.age+person.culture.menopauseAge ),
-			dead: true	// Someday we might let this person live by exist elsewhere
-		});
-		this.personList.add( mother );
-
-		// And since every living person needs to have a mother and father...
-		let husband = this.personList.find( husband => husband.canBeHusbandOf(mother) );
-		husband = husband || this.makeHusbandOf(mother);
-		mother.spouse = husband;
-		console.assert( husband.spouse );
-
-		return mother;
-	}
-
-	createRelatedness() {
-		let hack = 0;
-
-		this.personList.shuffle();
-
-		// Find or make my mother, which auto-makes mother-based families
-		this.personList.traverse( person => {
-			let mother = this.personList.find( mom => mom.canBeMotherOf(person) );
-			mother = mother || this.makeMotherOf( person );
-			person.mother = mother;
-		});
-
-		// Find or make my Husband
-		this.personList.traverse( person => {
-			let needsHusband = !person.spouse && person.isFemale && (person.childCount > 0 || person.culture.chanceMarried(person));
-			if( needsHusband ) {
-				let husband = this.personList.find( spouse => spouse.canBeHusbandOf(person) );
-				husband = husband || this.makeHusbandOf(person);
-				person.spouse = husband;
-				console.assert( husband );
-			}
-		});
-
-		this.personList.traverse( person => {
-			console.assert( person.dead || (person.mother && person.father) );
-		});
-
-		// Assign surnames
-		let doSurname = person => {
-			if( person.surname ) {
-				return person.surname;
-			}
-			person.surname =
-				person.husband ? doSurname(person.husband) :
-				person.father ? doSurname(person.father) :
-				person.culture.generateSurname(person.nameFirst)
-			;
-			return person.surname;
-		}
-		this.personList.traverse( person => doSurname(person) );
-
-		// Validate surnames
-		this.personList.traverse( person => {
-			console.assert( person.surname );
-			if( person.spouse ) {
-				console.assert( person.surname == person.spouse.surname );
-			}
-			if( person.father && !(person.isFemale || person.spouse) ) {
-				console.assert( person.surname == person.father.surname );
-			};
-		});
-
-		this.personList.traverse( person => {
-			if( person.isOrphan ) {
-				person.guardian = this.personList.finder.filter( guardian => guardian.isAlive && !guardian.isMinor ).pick();
-				console.assert( person.guardian );
-			}
-		});
-
-	}
-
-	createHouseholds() {
-
-		let doHousehold = person => {
-			console.assert( person.isAlive );
-			if( person.household ) {
-				return person.household;
-			}
-			if( person.isOrphan ) {
-				return person.household = doHousehold( person.guardian );
-			}
-			if( person.isMinor ) {
-				return person.household = doHousehold( person.father.isAlive ? person.father : person.mother );
-			}
-			if( person.husband && person.husband.isAlive ) {
-				return person.household = doHousehold( person.husband );
-			}
-
-			if( !person.hasMinorChildren ) {
-				// Find any unmarried same-gender person my age.
-				let single =  this.personList.find( p =>
-					p.isAlive &&
-					person.age < p.age &&
-					person.gender==p.gender &&
-					(p.isSingle || p.isWidow || p.isWidower) &&
-					!p.hasMinorChildren &&
-					p.culture.singleCohabitAgeMatch(p,person)
-				);
-				if( single ) {
-					return person.household = doHousehold( single );
-				}
-			}
-
-			person.household = new Household( person );
-			this.community.householdList.add( person.household );
-			return person.household;
-		}
-	
-		this.personList.traverse( person => {
-			if( person.isDead ) {
-				return;
-			}
-			doHousehold( person );
-		});
-
-	}
-
-	addPlaceBySketch(sketch,isFirst) {
-		let placeType;
-		let repLimit = 100;
-		do { 
-			placeType = sketch.table.pick();
-		} while( isFirst && placeType.neverPickFirst && --repLimit );
-		console.assert( repLimit );
-		let workforceRatio	= Math.min( 1.0, placeType.workforceRatio || sketch.workforceRatio );
-		console.assert( workforceRatio && Number.isFinite(workforceRatio) );
-		let workforceMax	= Math.clamp( Math.floor( workforceRatio*sketch.workersTotal ), 1, placeType.workforceMax || 999 );
-		let workerCapacity	= placeType.alwaysMaxWorkforce ? workforceMax : Math.randInt( 1, workforceMax );
-		let place = new Place( placeType, workerCapacity );
-		//console.log('Picked '+place.text);
-		this.placeList.add( place );
-		return place;
-	}
-
-	addPeopleFor(place) {
-
-		let chanceForJobType = 1;
-		let jobPicker		= new Pick.Table().scanHash( place.jobTypeHash, jobType => jobType.chance || chanceForJobType )
-		let mustPickFirst 	= Object.find( place.jobTypeHash, jobType => jobType.mustPickFirst );
-		let useIfSingular	= Object.find( place.jobTypeHash, jobType => jobType.useIfSingular );
-		let workersRemaining = place.workerCapacity;
-		let isFirst = true;
-
-		while( workersRemaining > 0 ) {
-			let jobType =
-				place.workerCapacity==1 && useIfSingular ? useIfSingular :
-				isFirst && mustPickFirst ? mustPickFirst :
-				jobPicker.pick()
-			;
-			let isBoss = place.workerCapacity==1 || mustPickFirst;
-			isFirst = false;
-			mustPickFirst = null;
-			if( jobType.onePerWorkplace ) {
-				jobPicker.forbid( pickerJobType => pickerJobType.id == jobType.id );
-			}
-			let person = new Person( this.community.culture, jobType, place, { isBoss: isBoss } );
-			this.community.personList.add( person );
-			--workersRemaining;
-		}
-	}
-
-	createPlaces(population) {
-		// Generate places that roughly meet the population's needs
-		let chanceOfEachPlaceType = 1;
-		let sketchHash	= Object.map( AspectTypeHash, (aspectType,aspectTypeId) => ({
-			workforceRatio: aspectType.workforceRatio,
-			workersTotal: 0,
-			workersPending: 0,
-			table: new Pick.Table().scanHash(
-				aspectType.placeTypeHash,
-				placeType => placeType.chance || chanceOfEachPlaceType
-			)
-		}) );
-
-		// Rough-out number of workers toiling to serve each aspectType, but not the actual persons.
-		new Pick.Stocker()
-			.scanHash(
-				AspectTypeHash,
-				aspectType => aspectType.percentOfPopulation,
-				aspectType => { sketchHash[aspectType.id].workersPending++; sketchHash[aspectType.id].workersTotal++; }
-			)
-			.produce( population )
-		;
-
-		// Now generate the places they toil at
-		Object.each( sketchHash, sketch => {
-			let isFirst = true;
-			while( sketch.workersPending > 0 ) {
-				let place = this.addPlaceBySketch( sketch, isFirst );
-				isFirst = false;
-				sketch.workersPending -= place.workerCapacity;
-				let chanceMod = place.onePerCommunity ? 0.0 : 0.3;
-				sketch.table.changeChanceOfLast(chanceMod);	// haf as likely to pick this again
-				sketch.table.relevel();
-			}
-		});
-	}
-
-	build(population) {
-
-		// Create all the places that serve this population
-		this.createPlaces(population);
-
-		// Add people appropriate to all the places
-		this.placeList.traverse( place => {
-			this.addPeopleFor(place);
-		});
-
-		// Now make everyone related, creating dead ancestors as needed
-		this.createRelatedness();
-
-		// Give a place to live
-		this.createHouseholds();
-
-	}
-}
-
-let Aspect = {};
-
-Aspect.Base = class {
-	constructor(community,setup) {
-		Object.assign( this, setup );
-		this.community = community;
-	}
-	get peopleSatisfied() {
-		return this.community.personList.sum(
-			person => person.produces.id==this.id ? person.production : 0
-		);
-	}
-	get productivity() {
-		return this.peopleSatisfied / this.community.population;
-	}
-}
-
-Aspect.Shelter = class extends Aspect.Base {
-	get productivity() {
-		return this.peopleSatisfied / this.community.population;
-	}
-}
-
-class AspectHash extends HashManager {
-	constructor() {
-		super();
-	}
-	traverse(fn) {
-		super.traverse( (aspect,aspectId) => {
-			if( aspect.isHidden ) {
-				return;
-			}
-			return fn( aspect, aspectId );
-		});
-	}
-}
-
-
-class Community {
-	constructor(culture) {
-		this.culture = culture;
-		this.aspectHash = new AspectHash;
-		this.placeList = new PlaceList;
-		this.personList = new PersonList;
-		this.householdList = new ListManager;
-
-		this.communityBuilder = new CommunityBuilder(this)
-		Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
-			let aspectClassId = String.capitalize(aspectTypeId);
-			let aspectClass = Aspect[aspectClassId] || Aspect.Base;
-			this.aspectHash.add( aspectTypeId, new aspectClass(this,aspectType) );
-		});
-	}
-	get population() {
-		return this.personList.length;
-	}
-}
-
-class ViewCommunity extends ViewObserver {
-	constructor(divId) {
-		super();
-		this.initialized = false;
 		this.divId = divId;
-		this.div = {};
+		this.panel = new Visual.Canvas( divId, makeComponentFn );
+		this.lastDay = -1;
 	}
 	get community() {
 		return this.observer.community;
 	}
-	initialLayout() {
-		console.assert( this.community );
-		this.community.aspectHash.traverse( (aspect,aspectId) => {
-			$('<div class="aspect Aspect'+aspectId+'"></div>').appendTo(this.divId);
-		});
-		this.initialized = true;
-	}
-
-	barGen(pct) {
-		pct = Math.clamp(pct-1.0,-1,1);
-		let width = 30;
-		let b0 = Math.floor( (pct<0 ? 1+pct : 1) * width );
-		let b1 = Math.floor( (pct<0 ? -pct : 0) * width );
-		let b3 = Math.floor( (pct>0 ? pct : 0) * width );
-
-		let s = '<div class="bar" style="width:'+(width*2+3)+'px;">'+
-			'<span class="b0" style="width:'+b0+'px;"></span>'+
-			'<span class="b1" style="width:'+b1+'px;"></span>'+
-			'<span class="b2" style="width:1px;"></span>'+
-			'<span class="b3" style="width:'+b3+'px;"></span>'+
-			'</div>'
-		;
-		return s;
-	}
-
-	aspectContent(aspect,aspectId) {
-		let s = '';
-		s += '<div class="header">'+String.capitalize(aspectId)+'</div>';
-		s += this.barGen(aspect.productivity);
-		return s;
-	}
-
-	tick(dt) {
-		if( !this.initialized ) {
-			this.initialLayout();
+	message(msg,payload) {
+		super.message(msg,payload);
+		if( msg == 'panelShow' ) {
+			if( this.divId == payload ) {
+				this.panel.visible = true;
+			}
+			else {
+				let myTier = Gui.panelTier[this.divId];
+				let tier   = Gui.panelTier[payload];
+				if( tier == myTier ) {
+					this.panel.visible = false;
+				}
+			}
+			this.dirty = true;
 		}
-		this.dirty = true;
 	}
-	render(dt) {
-		this.community.aspectHash.traverse( (aspect,aspectId) => {
-			Gui.cachedRenderDiv( '.Aspect'+aspectId, this.aspectContent(aspect,aspectId) );
-		});
+	tick(dt) {
+		if( this.community.day !== this.lastDay ) {
+			this.panel.data.update();
+			this.dirty = true;
+			this.lastDay = this.community.day;
+		}
+this.dirty = true;
+
+		this.panel.tick(dt);
+	}
+	render() {
+		this.panel.render();
 	}
 }
+
+function onResize() {
+	Gui.layout({
+		'#guiMain': {
+			height: self => $('body').height() - self.offset().top - parseInt(self.css('margin-bottom'))
+		},
+		'#panelProductivity': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.50 ),
+			width:  self => $(self).height()*1.5
+		},
+		'#panelWellbeing': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
+			width:  self => $(self).height()*1.5
+		},
+		'#panelMorale': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
+			width:  self => $(self).height()*1.5
+		}
+	});
+}
+
 
 function main() {
 	let population = 20;
 
-	let community = new Community( new CultureBase() );
+	let community = new Community( new CultureBase(Name.gnomeFirst,Name.gnomeLast) );
 
 	community.communityBuilder.build(population);
 
-	community.placeList.dump();
+	community.venueList.dump();
 	community.personList.dump();
 	community.householdList.dump();
+	console.log( community.personList.map( person => person.textLineage ).join('\n') );
+	console.log( "Population="+community.population+" and "+community.ancestorList.length+" dead" );
+
+	community.dataFeed = {};
+	community.dataFeed.wellbeing 	= new DataFeed.Wellbeing(community);
+	community.dataFeed.morale		= new DataFeed.Morale(community);
+	community.dataFeed.productivity	= new DataFeed.Productivity(community,community.dataFeed.morale,community.dataFeed.wellbeing);
+
+	Gui.panelTier = {
+		panelProductivity: 0,
+		panelMorale: 1,
+		panelWellbeing: 1
+	}
+
+	let viewProductivity = new ViewPanel( 'panelProductivity', root => {
+		root.addData(		community.dataFeed.productivity );
+		root.addLayout(		new PanelProductivity.Layout(root) );
+		root.addVisuals(	new PanelProductivity.Visuals(root) );
+		root.addElements(	new PanelProductivity.Elements(root) );
+	});
+
+	let viewMorale = new ViewPanel( 'panelMorale', root => {
+		root.addData(		community.dataFeed.morale );
+		root.addLayout(		new PanelMorale.Layout(root) );
+		root.addVisuals(	new PanelMorale.Visuals(root) );
+		root.addElements(	new PanelMorale.Elements(root) );
+		root.visible = false;
+	});
+
+	let viewWellbeing = new ViewPanel( 'panelWellbeing', root => {
+		root.addData(		community.dataFeed.wellbeing );
+		root.addLayout(		new PanelWellbeing.Layout(root) );
+		root.addVisuals(	new PanelWellbeing.Visuals(root) );
+		root.addElements(	new PanelWellbeing.Elements(root) );
+		root.visible = false;
+	});
+
 
 	let observer = {
 		community: community
@@ -790,9 +201,20 @@ function main() {
 
 	let gui = Gui.createManager( ()=>{} );
 	gui.create( function() {
-		this.add('community',new ViewCommunity('#guiCommunity'));
+		this.add('productivity', viewProductivity );
+		this.add('morale', viewMorale );
+		this.add('wellbeing', viewWellbeing );
 	});
 	guiMessage( 'observer', observer );
+
+	window.addEventListener('resize', onResize );
+	onResize();
+
+	setTimeout( ()=>{
+		let event = new Event('resize');
+		window.dispatchEvent(event);
+	}, 100 );
+
 
 	Time.animationFrameTicker( dt => {
 		gui.tick(dt);
@@ -808,7 +230,14 @@ function main() {
 <body>
 	<div id="guiMain">
 		<div class='col0'>
-			<div id="guiCommunity"></div>
+			<div id="guiCommunity">
+				<div id="panelProductivity">
+				</div>
+				<div id="panelMorale" style="position:absolute;">
+				</div>
+				<div id="panelWellbeing" style="position:absolute;">
+				</div>
+			</div>
 		</div>
 	</div>
 	<script>

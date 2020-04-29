@@ -1,268 +1,332 @@
 Module.add('dataAspect',function() {
 
 let AspectTypeHash = {
+	water: {
+	},
+	sleep: {
+	},
+	leisure: {
+	},
+	arms: {
+	},
 	food: {
-		period: 14,
+		icon: 'food.png',
 		percentOfPopulation: 0.20,
-		placeInitHash: {
+		venueInitHash: {
 			farm: {
+				icon: 'farm.png',
 				workforceRatio: 0.50,
 				workforceMax: 50,
 //				domicile: { farmhouse: 9 },		// 9 tiles per inhabitant; if domicile not specified, it is just a house:9
-//				workplace: { field: 15 },		// if not specified, it is the same as the placename
+//				venue: { field: 15 },		// if not specified, it is the same as the venuename
 				jobInitHash: {
-					farmer: { onePerWorkplace: true, useIfSingular: true, mustPickFirst: true },
-					farmHand: {},
+					farmer: { onePerVenue: true, useIfSingular: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'farmer.png' } },
+					farmHand: { icon: { img: 'person.png', holding: 'farmer.png' } },
 				}
 			},
 			pasture: {
+				icon: 'field.png',
 				workforceMax: 20,
 				jobInitHash: {
-					shepherd: {},
-					cowboy: {}
+					shepherd: { icon: { img: 'person.png', holding: 'shepherd.png' } },
+					cowboy: { icon: 'cowboy.png' }
 				}
 			},
 			foodCaravan: {
+				icon: 'muleFood.png',
 				isTradeRoute: true,
 				workforceMax: 20,
 				jobInitHash: {
-					foodTrader: {},
+					foodTrader: { icon: { img: 'person.png', iconHolding: 'food.png' } },
 				}
 			},
 			garden: {
+				icon: 'garden.png',
 				neverPickFirst: true,
 				workforceMax: 5,
 				jobInitHash: {
-					botanist: { },
+					botanist: { icon: { img: 'person.png', iconHolding: 'garden.png' } },
+					beeKeeper: { icon: { img: 'person.png', iconHolding: 'beeKeeperHolding.png' } },
 				}
 			},
 			grocery: {
+				icon: 'grocery.png',
 				neverPickFirst: true,
 				workforceMax: 10,
 				jobInitHash: {
-					grocer: { }
+					grocer: { icon: { img: 'person.png', iconHolding: 'grocery.png' } }
 				}
 			}
 		}
 	},
-	shelter: {	// Includes construction of all food storage, cisterns, etc.
-		period: 30,
+	venue: {	// Includes construction of all food storage, cisterns, etc.
+		icon: 'venue.png',
 		percentOfPopulation: 0.05,
-		placeInitHash: {
+		venueInitHash: {
 			builder: {
+				icon: 'builder.png',
 				workforceMax: 15,
 				jobInitHash: {
-					mason: {},
-					carpenter: {}
+					mason: { icon: { img: 'person.png', holding: 'mason.png' } },
+					carpenter: { icon: { img: 'person.png', holding: 'carpenter.png' } }
 				}
 			}
 		}
 	},
 	security: {
-		period: 7,
-		percentOfPopulation: 1/7,
-		placeInitHash: {
+		icon: 'security.png',
+		percentOfPopulation: 0.10,
+		venueInitHash: {
 			barracks: {
+				icon: 'barracks.png',
+				venueAlso: 'trainingGrounds',
 				jobInitHash: {
-					captain: { onePerWorkplace: true },
-					guard: { useIfSingular: true },
-				}
-			},
-			training: {
-				jobInitHash: {
-					guard: {}
+					captain: { onePerVenue: true, icon: { img: 'person.png', holding: 'captain.png' } },
+					guard: { useIfSingular: true,  icon: { img: 'person.png', holding: 'guard.png' } },
+					medic: { 
+						chance: 0.10,	// About 10% of a battalion is medics.
+						producesId: 'health',
+						whole: true,
+						well: false,
+						icon: { img: 'person.png', holding: 'doctor.png' }
+					},
 				}
 			}
 		}
 	},
 	entertainment: {
-		period: 10,
+		icon: 'entertainment.png',
 		percentOfPopulation: 0.10,
-		placeInitHash: {
+		venueInitHash: {
 			studio: {
+				icon: 'artist.png',
 				workforceMax: 3,
 				jobInitHash: {
-					artist: {}
+					artist: { icon: { img: 'person.png', overlay: 'artist.png' } }
 				}
 			},
 			tavern: {
+				icon: 'tavern.png',
 				workforceMax: 12,
 				jobInitHash: {
-					bartender: { mustPickFirst: true, onePerWorkplace: true },
-					bard: { onePerWorkplace: true },
-					server: {}
+					bartender: { mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'bartender.png' } },
+					bard: { onePerVenue: true, icon: { img: 'person.png', holding: 'bard.png' } },
+					server: { icon: { img: 'person.png', holding: 'server.png' } }
 				}
 			},
 			theater: {
+				icon: 'theater.png',
 				workforceMax: 8,
 				jobInitHash: {
-					director: { onePerWorkplace: true },
-					actor: { useIfSingular: true }
+					director: { onePerVenue: true, icon: { img: 'person.png', holding: 'director.png' } },
+					actor: { useIfSingular: true, icon: { img: 'person.png', holding: 'actor.png' } }
 				}
 			}
 		}
 	},
 	leadership: {
-		period: 1,
-		percentOfPopulation: 0.10,
-		placeInitHash: {
+		icon: 'leadership.png',
+		percentOfPopulation: 0.05,
+		venueInitHash: {
 			palace: {
+				icon: 'palace.png',
 				onePerCommunity: true,
 				alwaysMaxWorkforce: true,
 				jobInitHash: {
-					ruler: { onePerWorkplace: true, mustPickFirst: true },
-					planner: { onePerWorkplace: true },
-					functionary: {},
+					ruler: { onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'ruler.png' } },
+					planner: { onePerVenue: true, icon: { img: 'person.png', holding: 'planner.png' } },
+					functionary: { icon: { img: 'person.png', holding: 'planner.png' } },
+					servant: { icon: { img: 'person.png', holding: 'servant.png' } },
 				}
 			},
 			estate: {
+				icon: 'estate.png',
 				workforceMax: 12,
 				jobInitHash: {
-					noble: { onePerWorkplace: true, mustPickFirst: true },
-					lackey: {}
+					noble: { onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'noble.png' } },
+					servant: { icon: { img: 'person.png', holding: 'servant.png' } }
 				}
 			}
 		}
 	},
-	goods: {
-		period: 1,
-		percentOfPopulation: 1/3.5,		// ~0.28
-		placeInitHash: {
+	children: {
+		isHidden: true,
+		percentOfPopulation: 0.18,
+		venueInitHash: {
+			family: {
+				icon: 'children.png',
+				jobInitHash: {
+					child: { isChild: true, icon: 'children.png' }
+				}
+			}
+		}
+	},
+	gear: {
+		icon: 'goods.png',
+		percentOfPopulation: 0.20,
+		venueInitHash: {
 			caravan: {
+				icon: 'muleLaden.png',
 				isTradeRoute: true,
 				chance: 5,
 				workforceRatio: 0.20,	// double the usual
 				workforceMax: 6,
 				jobInitHash: {
-					trader: {}
+					trader: { icon: { img: 'person.png', holding: 'trader.png' } }
 				}
 			},
 			peddlerWagon: {					// basically an itinerant trader
+				icon: 'muleLaden.png',
 				workforceRatio: 0.001,
 				workforceMax: 2,
 				jobInitHash: {
-					peddler: {}
+					peddler: { icon: { img: 'person.png', holding: 'trader.png' } }
 				}
 			},
 			bloomery: {
+				icon: 'bloomery.png',
 				workforceMax: 12,
 				jobInitHash: {
-					smelterForeman: { onePerWorkplace: true },
-					smelter: { useIfSingular: true }
+					smelterForeman: { onePerVenue: true, icon: { img: 'person.png', holding: 'bloomery.png' } },
+					smelter: { useIfSingular: true, icon: { img: 'person.png', holding: 'bloomery.png' } }
 				}
 			},
 			brewery: {
+				icon: 'brewer.png',
 				workforceMax: 12,
 				jobInitHash: {
-					brewer: {},
+					brewer: { icon: { img: 'person.png', holding: 'brewer.png' } },
 				}
 			},
 			clothier: {
+				icon: 'clothier.png',
 				workforceMax: 4,
 				jobInitHash: {
-					tailor: {},
-					clothier: {},
-					haberdasher: {},
-					cobbler: {},
+					clothier: { icon: { img: 'person.png', holding: 'clothier.png' } },
+					tailor: { icon: { img: 'person.png', holding: 'tailor.png' } },
+					haberdasher: { icon: { img: 'person.png', holding: 'clothier.png' } },
+					cobbler: { icon: { img: 'person.png', holding: 'cobbler.png' } },
 				}
 			},
-			armory: {
+			armorer: {
+				icon: 'armor.png',
 				workforceMax: 8,
 				jobInitHash: {
-					armorer: { mustPickFirst: true },
-					gaunter: {}
+					armorer: { mustPickFirst: true, icon: { img: 'person.png', holding: 'armor.png' } },
+					gaunter: { icon: { img: 'person.png', holding: 'armor.png' } }
 				}
 			},
 			bowyery: {
+				icon: 'bow.png',
 				workforceMax: 6,
 				jobInitHash: {
-					bowyer: { mustPickFirst: true },
-					fletcher: {}
+					bowyer: { mustPickFirst: true, icon: { img: 'person.png', holding: 'bow.png' }  },
+					fletcher: { icon: { img: 'person.png', holding: 'fletcher.png' } }
 				}
 			},
 			jeweler: {
+				icon: 'jeweler.png',
 				workforceMax: 4,
 				jobInitHash: {
-					jeweler: { mustPickFirst: true },
-					lapidary: {}
+					jeweler: { mustPickFirst: true, icon: { img: 'person.png', holding: 'jeweler.png' } },
+					lapidary: { icon: { img: 'person.png', holding: 'lapidary.png' } }
 				}
 			},
 			glassBlower: {
+				icon: 'glass.png',
 				workforceMax: 8,
 				jobInitHash: {
-					glassBlower: {}
+					glassBlower: { icon: { img: 'person.png', holding: 'glass.png' } }
 				}
 			},
 			mine: {
+				icon: 'miner.png',
 				workforceMax: 40,
 				jobInitHash: {
-					mineForeman: { mustPickFirst: true, onePerWorkplace: true },
-					miner: { useIfSingular: true }
+					mineForeman: { mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'miner.png' } },
+					miner: { useIfSingular: true, icon: { img: 'person.png', holding: 'miner.png' } }
 				}
 			},
 			smithy: {
+				icon: 'smith.png',
 				workforceMax: 6,
 				jobInitHash: {
-					blacksmith: { mustPickFirst: true },
-					smithApprentice: {}
+					blacksmith: { mustPickFirst: true, icon: { img: 'person.png', holding: 'smith.png' } },
+					smithApprentice: { icon: { img: 'person.png', holding: 'smith.png' } }
 				}
 			}
 		}
 	},
 	wisdom: {
-		period: 7,
+		icon: 'book.png',
 		percentOfPopulation: 0.05,
-		placeInitHash: {
+		venueInitHash: {
 			library: {
+				icon: 'library.png',
 				workforceMax: 20,
 				jobInitHash: {
-					librarian: {}
+					librarian: { icon: { img: 'person.png', holding: 'library.png' } }
 				}
 			},
 			school: {
+				icon: 'school.png',
 				workforceMax: 20,
 				jobInitHash: {
-					teacher: { useIfSingular: true },
-					principle: {}
+					teacher: { useIfSingular: true, icon: { img: 'person.png', holding: 'school.png' } },
+					principle: { icon: { img: 'person.png', holding: 'school.png' } }
 				}
 			},
 			temple: {
+				icon: 'temple.png',
 				workforceMax: 12,
 				jobInitHash: {
-					priest: { mustPickFirst: true },
-					acolyte: {}
-				}
-			},
-			hospital: {
-				workforceMax: 20,
-				jobInitHash: {
-					doctor: { mustPickFirst: true },
-					nurse: {}
+					priest: { mustPickFirst: true, icon: { img: 'person.png', holding: 'priest.png' } },
+					acolyte: { icon: { img: 'person.png', holding: 'priest.png' } }
 				}
 			},
 			scriptorium: {
+				icon: 'scribe.png',
 				workforceMax: 8,
 				jobInitHash: {
-					scribe: {}
+					scribe: { icon: { img: 'person.png', holding: 'scribe.png' } }
+				}
+			}
+		}
+	},
+	health: {
+		icon: 'doctor.png',
+		percentOfPopulation: 0.02,	// A doc can serve 50 people, under normal conditions.
+		venueInitHash: {
+			doctor: {
+				icon: 'doctor.png',
+				workforceMax: 2,
+				chance: 80,
+				jobInitHash: {
+					doctor: { mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' } },
+					nurse: { icon: { img: 'person.png', holding: 'doctor.png' } }
+				}
+			},
+			hospital: {
+				icon: 'doctor.png',
+				workforceMax: 20,
+				jobInitHash: {
+					doctor: { mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' } },
+					nurse: { icon: { img: 'person.png', holding: 'doctor.png' } }
 				}
 			}
 		}
 	},
 	indigent: {
+		icon: 'beggar.png',
 		isHidden: true,
-		period: 0,
-		percentOfPopulation: 0.20,
-		placeInitHash: {
-			family: {
-				chance: 0.90,
-				jobInitHash: {
-					child: { isChild: true }
-				}
-			},
+		percentOfPopulation: 0.05,
+		neverProductive: true,
+		venueInitHash: {
 			around: {
+				icon: 'beggar.png',
 				chance: 0.10,
 				jobInitHash: {
-					bum: { }
+					bum: { icon: { img: 'person.png', holding: 'beggar.png' } }
 				}
 			}
 		}
@@ -272,7 +336,7 @@ let AspectTypeHash = {
 	AspectType
 	percentOfPopulation	- how much of the pop will do this job
 	popServedPerWorker	- how many people will be served by one worker of normal skill at this job
-	placeTypeHash {}	- all the places that produce this aspect
+	venueTypeHash {}	- all the venues that produce this aspect
 	jobTypeHash {}		- what job types produce this aspect
 */
 
@@ -281,74 +345,84 @@ let AspectTypeHash = {
 	-------
 	id					- unique jobTypeId
 	name				- name of this job type
-	workplaceType		- placeType that this job works at
+	venueType		- venueType that this job works at
 	produces			- what this job produces
-	peopleServed		- the number of people a single worker at this job can serve with nominal skill
+	workerImpact		- the number of people a single worker at this job can serve with nominal skill
 	mustPickFirst
 	useIfSingular
-	onePerWorkplace
+	onePerVenue
+	producesId			- if you'd like to overload what this guy produces.
 */
 let JobTypeHash = {
 };
 
 /**
-	PlaceType
+	VenueType
 	---------
-	id					- unique placeTypeId
-	name				- what this place is called
-	jobTypeHash			- what jobs work at this place
-	workerCapacity		- (Place) how many workers this place has utilize
-	workers {}			- (Place) who my workers actually are
+	id					- unique venueTypeId
+	name				- what this venue is called
+	jobTypeHash			- what jobs work at this venue
+	workerCapacity		- (Venue) how many workers this venue has utilize
+	workers {}			- (Venue) who my workers actually are
 */
 
-let PlaceTypeHash = {
+let VenueTypeHash = {
 };
 
 
+let totalPercentOfPopulation = 0;
+
 Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
 	aspectType.id				= aspectTypeId;
-	aspectType.placeTypeHash	= {};
+	aspectType.isAspectType		= true;
+	aspectType.venueTypeHash	= {};
 	aspectType.jobTypeHash		= {};
 
-	// Normally each place can consume an equal number of workers.
-	aspectType.workforceRatio = 1/Object.count(aspectType.placeInitHash);
+	// Normally each venue can consume an equal number of workers.
+	aspectType.workforceRatio = 1/Object.count(aspectType.venueInitHash);
 	//console.log(aspectTypeId,aspectType.workforceRatio);
 
+	totalPercentOfPopulation += (aspectType.percentOfPopulation||0);
+	aspectType.workerImpact = !aspectType.percentOfPopulation ? 0 : 1 / aspectType.percentOfPopulation;
+
 	// Initialize global hashes, and also my local hashes.
-	Object.each( aspectType.placeInitHash, (placeInit,placeTypeId) => {
-		PlaceTypeHash[placeTypeId] = PlaceTypeHash[placeTypeId] || {};
-		aspectType.placeTypeHash[placeTypeId] = PlaceTypeHash[placeTypeId];
-		Object.each( placeInit.jobInitHash, (jobInit,jobTypeId) => {
+	Object.each( aspectType.venueInitHash, (venueInit,venueTypeId) => {
+		VenueTypeHash[venueTypeId] = VenueTypeHash[venueTypeId] || {};
+		aspectType.venueTypeHash[venueTypeId] = VenueTypeHash[venueTypeId];
+		Object.each( venueInit.jobInitHash, (jobInit,jobTypeId) => {
 			JobTypeHash[jobTypeId] = JobTypeHash[jobTypeId] || {};
 			aspectType.jobTypeHash[jobTypeId] = JobTypeHash[jobTypeId];
 		});
 	});
 
 	// Fill in the members of each.
-	Object.each( aspectType.placeInitHash, (placeInit,placeTypeId) => {
+	Object.each( aspectType.venueInitHash, (venueInit,venueTypeId) => {
 
-		// Assign the PlaceType
+		// Assign the VenueType
 		Object.assign(
-			PlaceTypeHash[placeTypeId],
+			VenueTypeHash[venueTypeId],
 			{
-				id:					placeTypeId,
-				//name:				placeTypeId,
-				jobTypeHash:		Hash.map( placeInit.jobInitHash, (X,jobTypeId) => JobTypeHash[jobTypeId] ),
+				id:					venueTypeId,
+				isVenueType:		true,
+				//name:				venueTypeId,
+				jobTypeHash:		Hash.map( venueInit.jobInitHash, (X,jobTypeId) => JobTypeHash[jobTypeId] ),
 				produces:			aspectType
 			},
-			placeInit
+			venueInit
 		);
 
 		// Assign the JobType
-		Object.each( placeInit.jobInitHash, (jobInit,jobTypeId) => {
+		Object.each( venueInit.jobInitHash, (jobInit,jobTypeId) => {
+			let produces = !jobInit.producesId ? aspectType : AspectTypeHash[jobInit.producesId];
 			Object.assign( 
 				JobTypeHash[jobTypeId],
 				{
 					id:				jobTypeId,
+					isJobType:		true,
 					name:			jobTypeId,
-					workplaceType:	PlaceTypeHash[placeTypeId],
-					produces:		aspectType,
-					peopleServed:	1 / aspectType.percentOfPopulation
+					venueType:	VenueTypeHash[venueTypeId],
+					produces:		produces,
+					workerImpact:	!produces.percentOfPopulation ? 0 : 1 / produces.percentOfPopulation
 				},
 				jobInit
 			);
@@ -356,9 +430,14 @@ Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
 	});
 });
 
+if( totalPercentOfPopulation != 1.0 ) {
+	throw "percentOfPopulation is "+totalPercentOfPopulation+" but must be 1.0";
+}
+
+
 return {
 	AspectTypeHash: AspectTypeHash,
 	JobTypeHash: JobTypeHash,
-	PlaceTypeHash: PlaceTypeHash
+	VenueTypeHash: VenueTypeHash
 }
 });

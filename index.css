@@ -5,55 +5,27 @@ body {
 }
 
 #guiCommunity {
-	margin: 2%;
+	margin: 1%;
 }
 
-.aspect {
-	display: inline-block;
-	width: 12%;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	margin-left: 1%;
-	margin-right: 1%;
-	height: 120px;
+div.iconButton {
 }
 
-.aspect div.header {
-	font-size: 140%;
-	text-align: center;
-	font-weight: bold;
-	margin-top: 6px;
-	margin-bottom: 6px;
+div.iconButton:hover {
+	border: 2px solid cyan;
+	border-radius: 6px;
 }
 
-.bar {
-	border: 1px solid transparent;
-	width: 60%;
-	height: 20px;
-	margin: auto;
-	margin-top: 12px;
-	background-color: #333;
-	overflow: hidden;
-	white-space: nowrap;
+div.wellbeingPick:hover {
+	border: 2px solid cyan;
+	border-radius: 6px;
+	border-right-style: none;
+	border-top-right-radius: 0px;
+	border-bottom-right-radius: 0px;
 }
 
-.bar span {
-	display: inline-block;
-	height: 18px;
-}
+div.wellbeingInfo {
+	color: #CCC;
+	font-size: 7vh;
 
-.bar span.b0 {
-	background-color: transparent;
-}
-
-.bar span.b1 {
-	background-color: red;
-}
-
-.bar span.b2 {
-	background-color: white;
-}
-
-.bar span.b3 {
-	background-color: green;
 }

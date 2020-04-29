@@ -3,6 +3,7 @@ Module.add('dataBasics',function() {
 
 class NameRepo {
 	constructor(nameList) {
+		console.assert(nameList);
 		this.nameList = nameList;
 		this.index = 0;
 		this.shuffle();
@@ -25,18 +26,19 @@ class NameRepoGendered {
 		this.femaleRepo = new NameRepo(nameListGendered.female);
 	}
 	pickUnique(genderLetter) {
+		console.assert( String.validGender(genderLetter) );
 		return genderLetter=='M' ? this.maleRepo.pickUnique : this.femaleRepo.pickUnique;
 	}
 }
 
 class CultureBase {
-	constructor() {
+	constructor(nameFirstList,nameLastList) {
 		this.isCulture = true;
 
-		this.nameRepo = new NameRepoGendered(Name.humanList);
-		this.surnameRepo = new NameRepo(
-			['smith','jones','johnson','white','pickens','bivens','taylor','parker','jones','brown','black','fielding','williams','johnson','davies','evans','thomas','roberts','walker','wright','robinson','thompson','hughes','edwards','green','lewis','wood','harris','martin','jackson','clarke'].map( n => String.capitalize(n) )
-		);
+		this.nameRepo = new NameRepoGendered(nameFirstList);
+		this.surnameRepo = new NameRepo(nameLastList);
+//			['smith','jones','johnson','white','pickens','bivens','taylor','parker','jones','brown','black','fielding','williams','johnson','davies','evans','thomas','roberts','walker','wright','robinson','thompson','hughes','edwards','green','lewis','wood','harris','martin','jackson','clarke'].map( n => String.capitalize(n) )
+//		);
 
 		this.ageOfMajority = 18;
 		this.marryingAge = 18;
@@ -65,6 +67,7 @@ class CultureBase {
 	}
 
 	generateName(genderLetter) {
+		console.assert( String.validGender(genderLetter) );
 		return this.nameRepo.pickUnique(genderLetter);
 	}
 	generateSurname(firstName) {
@@ -77,13 +80,13 @@ class CultureBase {
 	generateGender() {
 		return Math.fChance(this.populationPercentWomen) ? 'F' : 'M'; //['M','F'][Math.randInt(0,2)];
 	}
-	generateSkill() {
-		let chanceForSpazz = 0.3;
-		let skill = 3 - Math.floor( Math.sqrt( Math.rand(0,3*3) ) );	// 1-3
-		if( skill == 1 && Math.fChance(chanceForSpazz) ) {
-			skill = 0;
-		}
-		return skill;
+	generateSkillIndex() {
+		let skillChoice = [0,0,1,1,1,1,1,2,2,3];
+		// 20% spazzes
+		// 50% normals
+		// 20% capable
+		// 10% excellent
+		return skillChoice[Math.randInt(0,skillChoice.length)];
 	}
 	generateAge(isChild) {
 		let pickAge = (ageRange,min,max) => {
