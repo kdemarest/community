@@ -16,6 +16,7 @@
 <script src="dataCulture.js" charset="utf-8"></script>
 <script src="dataAspect.js" charset="utf-8"></script>
 
+<script src="cLayout.js" charset="utf-8"></script>
 <script src="cBuilder.js" charset="utf-8"></script>
 
 <script src="person.js" charset="utf-8"></script>
@@ -31,6 +32,7 @@
 <script src="panelMorale.js" charset="utf-8"></script>
 <script src="panelWellbeing.js" charset="utf-8"></script>
 <script src="panelProductivity.js" charset="utf-8"></script>
+<script src="panelCity.js" charset="utf-8"></script>
 
 <script src="dataFeed.js" charset="utf-8"></script>
 
@@ -84,7 +86,6 @@ Aspect.Event = class {
 }
 
 
-
 class ViewPanel extends ViewObserver {
 	constructor(divId,makeComponentFn) {
 		super();
@@ -110,6 +111,12 @@ class ViewPanel extends ViewObserver {
 			}
 			this.dirty = true;
 		}
+		if( msg == 'panelHide' ) {
+			if( this.divId == payload ) {
+				this.panel.visible = false;
+			}
+			this.dirty = true;
+		}
 	}
 	tick(dt) {
 		if( this.community.day !== this.lastDay ) {
@@ -126,29 +133,9 @@ this.dirty = true;
 	}
 }
 
-function onResize() {
-	Gui.layout({
-		'#guiMain': {
-			height: self => $('body').height() - self.offset().top - parseInt(self.css('margin-bottom'))
-		},
-		'#panelProductivity': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.50 ),
-			width:  self => $(self).height()*1.5
-		},
-		'#panelWellbeing': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
-			width:  self => $(self).height()*1.5
-		},
-		'#panelMorale': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
-			width:  self => $(self).height()*1.5
-		}
-	});
-}
-
 
 function main() {
-	let population = 20;
+	let population = 60;
 
 	let community = new Community( new CultureBase(Name.gnomeFirst,Name.gnomeLast) );
 
@@ -164,6 +151,7 @@ function main() {
 	community.dataFeed.wellbeing 	= new DataFeed.Wellbeing(community);
 	community.dataFeed.morale		= new DataFeed.Morale(community);
 	community.dataFeed.productivity	= new DataFeed.Productivity(community,community.dataFeed.morale,community.dataFeed.wellbeing);
+	community.dataFeed.city			= new DataFeed.City(community);
 
 	Gui.panelTier = {
 		panelProductivity: 0,
@@ -194,6 +182,14 @@ function main() {
 		root.visible = false;
 	});
 
+	let viewCity = new ViewPanel( 'panelCity', root => {
+		root.addData(		community.dataFeed.city );
+		root.addLayout(		new PanelCity.Layout(root) );
+		root.addVisuals(	new PanelCity.Visuals(root) );
+		root.addElements(	new PanelCity.Elements(root) );
+		root.visible = true;
+	});
+
 
 	let observer = {
 		community: community
@@ -204,6 +200,7 @@ function main() {
 		this.add('productivity', viewProductivity );
 		this.add('morale', viewMorale );
 		this.add('wellbeing', viewWellbeing );
+		this.add('city', viewCity );
 	});
 	guiMessage( 'observer', observer );
 
@@ -222,6 +219,32 @@ function main() {
 	});
 }
 
+function onResize() {
+	Gui.layout({
+//		'#guiCity': {
+//			height: self => $('window').height()
+//		}
+/*
+		'#guiMain': {
+			height: self => $('body').height() - self.offset().top - parseInt(self.css('margin-bottom'))
+		},
+		'#panelProductivity': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.50 ),
+			width:  self => $(self).height()*1.5
+		},
+		'#panelWellbeing': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
+			width:  self => $(self).height()*1.5
+		},
+		'#panelMorale': {
+			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
+			width:  self => $(self).height()*1.5
+		}
+*/
+	});
+}
+
+
 </script>
 
 
@@ -230,6 +253,12 @@ function main() {
 <body>
 	<div id="guiMain">
 		<div class='col0'>
+			<div id="guiCity">
+				<div id="panelCity">
+				</div>
+			</div>
+		</div>
+		<div class='col1'>
 			<div id="guiCommunity">
 				<div id="panelProductivity">
 				</div>

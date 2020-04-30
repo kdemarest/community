@@ -95,7 +95,7 @@ Aspect.Water = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup);
 		this.cisterns = new class extends Storage {
-			get capacity() { return community.householdList.bedCount + this.builtCapacity; }
+			get capacity() { return community.householdList.bedCapacity + this.builtCapacity; }
 		}();
 		this.waterSourceActive = true;
 		this.cisterns.active = true;
@@ -125,12 +125,11 @@ Aspect.Sleep = class extends Aspect.Base {
 		super(community,setup);
 	}
 	get percentOperational() {
-		let bedCount = this.community.householdList.sum( household => household.bedCount );
-		return bedCount / this.community.population;
+		return this.production / this.community.population;
 	}
 	get production() {
-		let bedCount = this.community.householdList.sum( household => household.bedCount );
-		return bedCount;
+		let beds = this.community.householdList.sum( household => household.bedsAvailable );
+		return beds;
 	}
 }
 
@@ -194,8 +193,7 @@ Aspect.Venue = class extends Aspect.Base {
 		return this.dailyEffort.consume(amount);
 	}
 	get percentOperational() {
-		this.community.venueList.traverse( venue => console.log(venue.isOperational ? venue.workerCapacity : 0,venue.id ) );
-
+//		this.community.venueList.traverse( venue => console.log(venue.isOperational ? venue.workerCapacity : 0,venue.id ) );
 		let venueCount = this.community.venueList.sum( venue => venue.isOperational ? venue.workerCapacity : 0 );
 		return venueCount / this.community.population;
 	}

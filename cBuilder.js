@@ -8,16 +8,13 @@ class CommunityBuilder {
 		this.population = null;
 		this.combinedList = new PersonList();
 	}
-	get venueList() {
-		return this.community.venueList;
-	}
 
 	get householdList() {
 		return this.community.householdList;
 	}
 
 	makeHusbandOf(person) {
-		let venue   = this.venueList.pick();
+		let venue   = this.community.venueList.pick();
 		let jobType = new Finder( venue.jobTypeHash ).pick();
 		let husband = new Person( person.culture, this.community, jobType, venue, {
 			gender: 'M',
@@ -29,7 +26,7 @@ class CommunityBuilder {
 	}
 
 	makeMotherOf(person) {
-		let venue   = this.venueList.pick();
+		let venue   = this.community.venueList.pick();
 		let jobType = new Finder( venue.jobTypeHash ).pick();
 		let mother = new Person( person.culture, this.community, jobType, venue, {
 			gender: 'F',
@@ -140,7 +137,7 @@ class CommunityBuilder {
 				}
 			}
 
-			person.household = new Household( person );
+			person.household = new Household();
 			this.householdList.add( person.household );
 			return person.household;
 		}
@@ -151,31 +148,11 @@ class CommunityBuilder {
 			}
 			doHousehold( person );
 		});
-
-		this.householdList.traverse( household => {
-			household._bedCount = household.memberCount;
-		});
-	}
-
-	addVenueBySketch(sketch,isFirst) {
-		let venueType;
-		let repLimit = 100;
-		do { 
-			venueType = sketch.table.pick();
-		} while( isFirst && venueType.neverPickFirst && --repLimit );
-		console.assert( repLimit );
-		let workforceRatio	= Math.min( 1.0, venueType.workforceRatio || sketch.workforceRatio );
-		console.assert( workforceRatio && Number.isFinite(workforceRatio) );
-		let workforceMax	= Math.clamp( Math.floor( workforceRatio*sketch.workersTotal ), 1, venueType.workforceMax || 999 );
-		let workerCapacity	= venueType.alwaysMaxWorkforce ? workforceMax : Math.randInt( 1, workforceMax );
-		let venue = new Venue( venueType, workerCapacity );
-		//console.log('Picked '+venue.text);
-		this.venueList.add( venue );
-		return venue;
 	}
 
 	addPeopleFor(venue) {
 		if( !venue.jobTypeHash || Object.isEmpty(venue.jobTypeHash) ) {
+			debugger;
 			return;
 		}
 
@@ -198,13 +175,30 @@ class CommunityBuilder {
 			if( jobType.onePerVenue ) {
 				jobPicker.forbid( pickerJobType => pickerJobType.id == jobType.id );
 			}
-			let person = new Person( this.community.culture, this.community, jobType, venue, { isBoss: isBoss } );
+			let venueActual = venue.isFakeVenue ? null : venue;
+			let person = new Person( this.community.culture, this.community, jobType, venueActual, { isBoss: isBoss } );
 			this.combinedList.add( person );
 			--workersRemaining;
 		}
 	}
 
-	createVenues(population) {
+	createVenueBySketch(sketch,isFirst) {
+		let venueType;
+		let repLimit = 100;
+		do { 
+			venueType = sketch.table.pick();
+		} while( isFirst && venueType.neverPickFirst && --repLimit );
+		console.assert( repLimit );
+		let workforceRatio	= Math.min( 1.0, venueType.workforceRatio || sketch.workforceRatio );
+		console.assert( workforceRatio && Number.isFinite(workforceRatio) );
+		let workforceMax	= Math.clamp( Math.floor( workforceRatio*sketch.workersTotal ), 1, venueType.workforceMax || 999 );
+		let workerCapacity	= venueType.alwaysMaxWorkforce ? workforceMax : Math.randInt( 1, workforceMax );
+		let venue = new Venue( venueType, workerCapacity );
+		//console.log('Picked '+venue.text);
+		return venue;
+	}
+
+	createSketchVenues(population) {
 		// Generate venues that roughly meet the population's needs
 		let chanceOfEachVenueType = 1;
 		let sketchHash	= Object.map( AspectTypeHash, (aspectType,aspectTypeId) => ({
@@ -228,16 +222,129 @@ class CommunityBuilder {
 		;
 
 		// Now generate the venues they toil at
+		let sketchVenueList = new ListManager();
 		Object.each( sketchHash, sketch => {
 			let isFirst = true;
 			while( sketch.workersPending > 0 ) {
-				let venue = this.addVenueBySketch( sketch, isFirst );
+				let venue = this.createVenueBySketch( sketch, isFirst );
+				sketchVenueList.add( venue );
 				isFirst = false;
 				sketch.workersPending -= venue.workerCapacity;
 				let chanceMod = venue.onePerCommunity ? 0.0 : 0.3;
 				sketch.table.changeChanceOfLast(chanceMod);	// haf as likely to pick this again
 				sketch.table.relevel();
 			}
+		});
+
+		return sketchVenueList;
+	}
+
+	layoutCity() {
+		class District extends Cluster {
+			constructor(districtId,flagId) {
+				super(districtId);
+				this[flagId] = true;
+				this.count = 0;
+			}
+		}
+
+		let getDistrict = (districtId,flagId) => {
+			if( !districtHash[districtId] ) {
+				districtHash[districtId] = new District(districtId,flagId);
+			}
+			return districtHash[districtId];
+		}
+
+		// 'any', 'military' and 'outlier' are not included here.
+		let anyDistrictId = ['wealthy','market','industrial','residential'];
+		let districtHash = {};
+
+		// Each structure gets a radius in tiles.
+		this.community.structureTraverse( structure => {
+			structure.tileRadius = Math.sqrt(structure.structureSize);
+		});
+
+		let districtGuide = {
+			military: { limit: 1, remaining: 0 },
+			outlier: { limit: 1, remaining: 0 },
+			residential: { limit: 8, remaining: 0 },
+		}
+
+
+		let once = true;
+		let districtSeparate = (districtId) => {
+			let result = districtId;
+			if( districtGuide[districtId] ) {
+				if( districtGuide[districtId].remaining <= 0 ) {
+					districtGuide[districtId].remaining = districtGuide[districtId].limit;
+					districtGuide[districtId].last = districtId+'-'+Date.makeUid();
+				}
+				districtGuide[districtId].remaining -= 1;
+				result = districtGuide[districtId].last;
+			}
+			return result;
+		}
+
+		let structureList = this.community.structureList;
+		structureList.shuffle();
+
+		// Establish the districts, and make the venues point to them.
+		structureList.traverse( structure => {
+			console.assert( structure.preferredDistrictId );
+			let districtId = structure.preferredDistrictId;
+			if( districtId == 'any' ) {
+				districtId = anyDistrictId[Math.randInt(0,anyDistrictId.length)];
+			}
+			let flagId = 'is'+String.capitalize(districtId);
+			districtId = districtSeparate(districtId);
+			structure.district = getDistrict( districtId, flagId );
+			console.assert( structure.district.id == districtId );
+			console.assert( structure.district.id !== 'residential' );
+			structure.district.count++;
+		});
+
+		// put all buildings in their districts.
+		structureList.traverse( structure => {
+			console.assert( structure.district.id !== 'residential' );
+			console.assert( structure.district );
+			structure.circle = structure.district.findRandom( structure.tileRadius );
+			structure.circle.id = structure.id;
+			structure.district.add( structure.circle );
+		});
+
+		// Re-center every district before adding, just to be safe.
+		Object.each( districtHash, district => {
+			district.moveBy( -district.x, -district.y );
+		});
+
+		// Now place the city center districts
+		let city = new Cluster();
+		Object.each( districtHash, (district,d) => {
+			if( district.isOutlier ) return;
+			let circle = city.findRandom(district.radius);
+			district.moveBy(-district.x+circle.x, -district.y+circle.y);
+			city.add( district );
+		});
+
+		Object.each( districtHash, (district,d) => {
+			if( !district.isOutlier ) return;
+			console.log( "outlier: "+district.id );
+			let circle = city.findRandom(district.radius);
+			district.moveBy(-district.x+circle.x, -district.y+circle.y);
+			city.add( district );
+		});
+
+
+		// Now center the city and districts and set scale from -1.0 to 1.0
+		city.moveBy( -city.x, -city.y );
+		city.scaleBy( 1/city.radius);
+
+		this.community.districtHash = new HashManager();
+		this.community.districtHash.hash = districtHash;
+
+		this.community.venueList.traverse( venue => {
+			if( !venue.district ) return;
+			console.log(venue.id,Math.floor(venue.circle.x*100),Math.floor(venue.circle.y*100),Math.floor(venue.circle.radius*100));
 		});
 	}
 
@@ -248,18 +355,24 @@ class CommunityBuilder {
 	build(population) {
 
 		// Create all the venues that serve this population
-		this.createVenues(population);
+		let sketchVenueList = this.createSketchVenues(population);
+
+		// Put eligible venues into the community
+		sketchVenueList.traverse( venue => !venue.isFakeVenue ? this.community.venueList.add(venue) : null );
 
 		// Add people appropriate to all the venues
-		this.venueList.traverse( venue => {
+		sketchVenueList.traverse( venue => {
 			this.addPeopleFor(venue);
 		});
 
 		// Now make everyone related, creating dead ancestors as needed
 		this.createRelatedness();
 
-		// Give a venue to live
+		// Give a place to live
 		this.createHouseholds();
+
+		// Put everything into the city
+		this.layoutCity();
 
 		this.combinedList.traverse( person => this.community[person.isAlive?'personList':'ancestorList'].add( person ) );
 

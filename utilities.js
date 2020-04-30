@@ -675,9 +675,13 @@ Module.add('utilities2',function() {
 
 
 	class ListManager {
-		constructor(validatorFn = null) {
-			this.list = [];
+		constructor(list=[]) {
+			this.list = list;
+			this.validatorFn = null;
+		}
+		setValidator(validatorFn) {
 			this.validatorFn = validatorFn;
+			return this;
 		}
 		get length() {
 			return this.list.length;
@@ -690,8 +694,11 @@ Module.add('utilities2',function() {
 			this.list.push( element );
 			return element;
 		}
+		filter( fn ) {
+			return this.list.filter(fn);
+		}
 		remove( fn ) {
-			return Array.filterInPlace( this.list, fn );
+			return Array.filterInPlace( this.list, (...args)=>!fn(...args) );
 		}
 		map( fn ) {
 			return this.list.map( fn );
@@ -741,6 +748,10 @@ Module.add('utilities2',function() {
 		}
 		get(id) {
 			return this.hash[id];
+		}
+		pickId() {
+			let list = Object.keys( this.hash );
+			return list[Math.randInt(0,list.length)];
 		}
 		get count() {
 			return Object.count(this.hash);

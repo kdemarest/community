@@ -6,9 +6,9 @@ class Community {
 		this.id = Date.makeUid();
 		this.culture = culture;
 		this.aspectHash = new AspectHash;
-		this.venueList = new VenueList;
-		this.personList = new PersonList( p=>p.isAlive );
-		this.ancestorList = new PersonList( p=>p.isDead );
+		this.personList = new PersonList().setValidator( p=>p.isAlive );
+		this.ancestorList = new PersonList().setValidator( p=>p.isDead );
+		this.venueList = new VenueList().setValidator( v=>v.type.district );
 		this.householdList = new HouseholdList;
 		this.eventList = new ListManager;
 
@@ -22,6 +22,15 @@ class Community {
 			let aspectClass = Aspect[aspectClassId] || Aspect.Base;
 			this.aspectHash.add( aspectTypeId, new aspectClass(this,aspectType) );
 		});
+	}
+
+	get structureList() {
+		return new ListManager( this.venueList.list.concat( this.householdList.list ) );
+	}
+
+	structureTraverse(fn) {
+		this.venueList.traverse(fn);
+		this.householdList.traverse(fn);
 	}
 
 	get aspect() {
@@ -105,10 +114,10 @@ class Community {
 		// anything first.
 		list.shuffle();	
 		list.traverse( building => {
-			if( building.structure.needsRepair ) {
+			if( building.needsRepair ) {
 				let amountToRepair = household.peopleDaysToBuild / daysToFullyRepair;
 				let daysToApply = this.aspect.venue.onResourceConsume(amountToRepair);
-				building.structure.repair( daysToApply );
+				building.repair( daysToApply );
 			}
 		});
 	}

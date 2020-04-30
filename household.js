@@ -1,18 +1,35 @@
 Module.add( 'household', ()=>{
 
-class Household {
+class Household extends Structure {
 	constructor() {
-		this.isHousehold  = true;
-		this.memberList   = [];
-		this.structure = new Structure();
+		super();
+		this.isHousehold	= true;
+		this.memberList		= [];
+		this.uid = Date.makeUid();
+		this.icon = 'household.png';
+	}
+	get id() {
+		return this.head.nameLast+'-'+this.uid;
+	}
+	get preferredDistrictId() {
+		return 'residential';
+	}
+	get structureSize() {
+		return Math.max(1,this.bedCapacity);
+	}
+	get textSummary() {
+		return this.head.nameLast+' ('+this.bedCapacity+')';
 	}
 	set bedCount(value) {
 		console.assert(false);
 	}
 	get isOperational() {
-		return !this.structure.needsRepair;
+		return !this.needsRepair;
 	}
-	get bedCount() {
+	get bedCapacity() {
+		return this.memberList.length;
+	}
+	get bedsAvailable() {
 		return !this.isOperational ? 0 : this.memberList.length;
 	}
 	hasBedFor( person ) {
@@ -71,8 +88,8 @@ class HouseholdList extends ListManager {
 	constructor() {
 		super();
 	}
-	get bedCount() {
-		return this.sum( household => household.bedCount );
+	get bedCapacity() {
+		return this.sum( household => household.bedCapacity );
 	}
 }
 

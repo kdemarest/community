@@ -1,11 +1,46 @@
 body {
+	overflow-x: hidden;
+	overflow-y: hidden;
+	color: white;
 	background-color: black;
-	color: #ddd;
-	font-size: 12px;
+}
+
+div {
+	qborder: 1px solid red;
+}
+
+#guiMain {
+	background-color: black;
+	white-space: nowrap;
+}
+
+#guiMain > div {
+	position: relative;
+	vertical-align: top;
+	display: inline-block;
+	height: 100%;
+}
+
+#guiMain .col0 {
+	width: calc( 100% - 504px );
+	height: 100%;
+}
+
+#guiMain .col1 {
+	width: 500px;
 }
 
 #guiCommunity {
-	margin: 1%;
+}
+
+#guiCity {
+	width: 100%;
+	height: 100%;
+}
+
+#panelCity {
+	width: 100%;
+	height: 100%;
 }
 
 div.iconButton {
@@ -29,3 +64,19 @@ div.wellbeingInfo {
 	font-size: 7vh;
 
 }
+
+#panelProductivity {
+	width: 500px;
+	height: 300px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	white-space: normal;
+	border-top: 1px solid #d2d2d2;
+	color: #d2d2d2;
+	font-family: 'Raleway', sans-serif;
+	font-size: 14px;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+

@@ -17,44 +17,76 @@ let AspectTypeHash = {
 				icon: 'farm.png',
 				workforceRatio: 0.50,
 				workforceMax: 50,
+				district: 'outlier',
+				tilesPerWorker: 14,
 //				domicile: { farmhouse: 9 },		// 9 tiles per inhabitant; if domicile not specified, it is just a house:9
 //				venue: { field: 15 },		// if not specified, it is the same as the venuename
 				jobInitHash: {
-					farmer: { onePerVenue: true, useIfSingular: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'farmer.png' } },
-					farmHand: { icon: { img: 'person.png', holding: 'farmer.png' } },
+					farmer: {
+						onePerVenue: true, useIfSingular: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'farmer.png' },
+						wealth: 'medium', houseAtWorkplace: true
+					},
+					farmHand: {
+						icon: { img: 'person.png', holding: 'farmer.png' },
+						wealth: 'low', houseAtWorkplace: true
+					},
 				}
 			},
 			pasture: {
 				icon: 'field.png',
 				workforceMax: 20,
+				district: 'outlier',
+				tilesPerWorker: 20,
 				jobInitHash: {
-					shepherd: { icon: { img: 'person.png', holding: 'shepherd.png' } },
-					cowboy: { icon: 'cowboy.png' }
+					shepherd: {
+						icon: { img: 'person.png', holding: 'shepherd.png' },
+						wealth: 'low', houseAtWorkplace: true
+					},
+					cowboy: {
+						icon: 'cowboy.png',
+						wealth: 'low', houseAtWorkplace: true
+					}
 				}
 			},
 			foodCaravan: {
 				icon: 'muleFood.png',
 				isTradeRoute: true,
 				workforceMax: 20,
+				district: 'market',
 				jobInitHash: {
-					foodTrader: { icon: { img: 'person.png', iconHolding: 'food.png' } },
+					foodTrader: {
+						icon: { img: 'person.png', iconHolding: 'food.png' },
+						wealth: 'low'
+					},
 				}
 			},
 			garden: {
 				icon: 'garden.png',
 				neverPickFirst: true,
 				workforceMax: 5,
+				district: 'residential',
+				tilesPerWorker: 2,
 				jobInitHash: {
-					botanist: { icon: { img: 'person.png', iconHolding: 'garden.png' } },
-					beeKeeper: { icon: { img: 'person.png', iconHolding: 'beeKeeperHolding.png' } },
+					botanist: {
+						icon: { img: 'person.png', iconHolding: 'garden.png' },
+						wealth: 'medium'
+					},
+					beeKeeper: {
+						icon: { img: 'person.png', iconHolding: 'beeKeeperHolding.png' },
+						wealth: 'medium'
+					},
 				}
 			},
 			grocery: {
 				icon: 'grocery.png',
 				neverPickFirst: true,
 				workforceMax: 10,
+				district: 'market',
 				jobInitHash: {
-					grocer: { icon: { img: 'person.png', iconHolding: 'grocery.png' } }
+					grocer: {
+						icon: { img: 'person.png', iconHolding: 'grocery.png' },
+						wealth: 'medium'
+					}
 				}
 			}
 		}
@@ -66,9 +98,16 @@ let AspectTypeHash = {
 			builder: {
 				icon: 'builder.png',
 				workforceMax: 15,
+				district: 'wealthy',
 				jobInitHash: {
-					mason: { icon: { img: 'person.png', holding: 'mason.png' } },
-					carpenter: { icon: { img: 'person.png', holding: 'carpenter.png' } }
+					mason: {
+						icon: { img: 'person.png', holding: 'mason.png' },
+						wealth: 'high'
+					},
+					carpenter: {
+						icon: { img: 'person.png', holding: 'carpenter.png' },
+						wealth: 'low'
+					}
 				}
 			}
 		}
@@ -80,15 +119,24 @@ let AspectTypeHash = {
 			barracks: {
 				icon: 'barracks.png',
 				venueAlso: 'trainingGrounds',
+				district: 'military',
+				tilesPerWorker: 2,
 				jobInitHash: {
-					captain: { onePerVenue: true, icon: { img: 'person.png', holding: 'captain.png' } },
-					guard: { useIfSingular: true,  icon: { img: 'person.png', holding: 'guard.png' } },
+					captain: {
+						onePerVenue: true, icon: { img: 'person.png', holding: 'captain.png' },
+						wealth: 'medium'
+					},
+					guard: {
+						useIfSingular: true,  icon: { img: 'person.png', holding: 'guard.png' },
+						wealth: 'low'
+					},
 					medic: { 
 						chance: 0.10,	// About 10% of a battalion is medics.
 						producesId: 'health',
 						whole: true,
 						well: false,
-						icon: { img: 'person.png', holding: 'doctor.png' }
+						icon: { img: 'person.png', holding: 'doctor.png' },
+						wealth: 'medium'
 					},
 				}
 			}
@@ -101,25 +149,48 @@ let AspectTypeHash = {
 			studio: {
 				icon: 'artist.png',
 				workforceMax: 3,
+				district: 'any',
 				jobInitHash: {
-					artist: { icon: { img: 'person.png', overlay: 'artist.png' } }
+					artist: {
+						icon: { img: 'person.png', overlay: 'artist.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			tavern: {
 				icon: 'tavern.png',
 				workforceMax: 12,
+				district: 'any',
+				tilesPerWorker: 3,
 				jobInitHash: {
-					bartender: { mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'bartender.png' } },
-					bard: { onePerVenue: true, icon: { img: 'person.png', holding: 'bard.png' } },
-					server: { icon: { img: 'person.png', holding: 'server.png' } }
+					bartender: {
+						mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'bartender.png' },
+						wealth: 'low'
+					},
+					bard: {
+						onePerVenue: true, icon: { img: 'person.png', holding: 'bard.png' },
+						wealthBySkill: true
+					},
+					server: {
+						icon: { img: 'person.png', holding: 'server.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			theater: {
 				icon: 'theater.png',
 				workforceMax: 8,
+				district: 'any',
+				tilesPerWorker: 3,
 				jobInitHash: {
-					director: { onePerVenue: true, icon: { img: 'person.png', holding: 'director.png' } },
-					actor: { useIfSingular: true, icon: { img: 'person.png', holding: 'actor.png' } }
+					director: {
+						onePerVenue: true, icon: { img: 'person.png', holding: 'director.png' },
+						wealth: 'low'
+					},
+					actor: {
+						useIfSingular: true, icon: { img: 'person.png', holding: 'actor.png' },
+						wealth: 'low'
+					}
 				}
 			}
 		}
@@ -132,31 +203,41 @@ let AspectTypeHash = {
 				icon: 'palace.png',
 				onePerCommunity: true,
 				alwaysMaxWorkforce: true,
+				district: 'wealthy',
+				tilesPerWorker: 5,
 				jobInitHash: {
-					ruler: { onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'ruler.png' } },
-					planner: { onePerVenue: true, icon: { img: 'person.png', holding: 'planner.png' } },
-					functionary: { icon: { img: 'person.png', holding: 'planner.png' } },
-					servant: { icon: { img: 'person.png', holding: 'servant.png' } },
+					ruler: {
+						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'ruler.png' },
+						wealth: 'high'
+					},
+					planner: {
+						onePerVenue: true, icon: { img: 'person.png', holding: 'planner.png' },
+						wealth: 'medium'
+					},
+					functionary: {
+						icon: { img: 'person.png', holding: 'planner.png' },
+						wealth: 'medium'
+					},
+					servant: {
+						icon: { img: 'person.png', holding: 'servant.png' },
+						wealth: 'low'
+					},
 				}
 			},
 			estate: {
 				icon: 'estate.png',
 				workforceMax: 12,
+				district: 'wealthy',
+				tilesPerWorker: 3,
 				jobInitHash: {
-					noble: { onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'noble.png' } },
-					servant: { icon: { img: 'person.png', holding: 'servant.png' } }
-				}
-			}
-		}
-	},
-	children: {
-		isHidden: true,
-		percentOfPopulation: 0.18,
-		venueInitHash: {
-			family: {
-				icon: 'children.png',
-				jobInitHash: {
-					child: { isChild: true, icon: 'children.png' }
+					noble: {
+						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'noble.png' },
+						wealth: 'medium'
+					},
+					servant: {
+						icon: { img: 'person.png', holding: 'servant.png' },
+						wealth: 'low'
+					}
 				}
 			}
 		}
@@ -171,88 +252,159 @@ let AspectTypeHash = {
 				chance: 5,
 				workforceRatio: 0.20,	// double the usual
 				workforceMax: 6,
+				district: 'market',
 				jobInitHash: {
-					trader: { icon: { img: 'person.png', holding: 'trader.png' } }
+					trader: {
+						icon: { img: 'person.png', holding: 'trader.png' },
+						wealth: 'medium'
+					}
 				}
 			},
 			peddlerWagon: {					// basically an itinerant trader
 				icon: 'muleLaden.png',
 				workforceRatio: 0.001,
 				workforceMax: 2,
+				district: 'any',
 				jobInitHash: {
-					peddler: { icon: { img: 'person.png', holding: 'trader.png' } }
+					peddler: {
+						icon: { img: 'person.png', holding: 'trader.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			bloomery: {
 				icon: 'bloomery.png',
 				workforceMax: 12,
+				district: 'industrial',
 				jobInitHash: {
-					smelterForeman: { onePerVenue: true, icon: { img: 'person.png', holding: 'bloomery.png' } },
-					smelter: { useIfSingular: true, icon: { img: 'person.png', holding: 'bloomery.png' } }
+					smelterForeman: {
+						onePerVenue: true, icon: { img: 'person.png', holding: 'bloomery.png' },
+						wealth: 'medium'
+					},
+					smelter: {
+						useIfSingular: true, icon: { img: 'person.png', holding: 'bloomery.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			brewery: {
 				icon: 'brewer.png',
 				workforceMax: 12,
+				district: 'any',
 				jobInitHash: {
-					brewer: { icon: { img: 'person.png', holding: 'brewer.png' } },
+					brewer: {
+						icon: { img: 'person.png', holding: 'brewer.png' },
+						wealth: 'medium'
+					},
 				}
 			},
 			clothier: {
 				icon: 'clothier.png',
 				workforceMax: 4,
+				district: 'market',
 				jobInitHash: {
-					clothier: { icon: { img: 'person.png', holding: 'clothier.png' } },
-					tailor: { icon: { img: 'person.png', holding: 'tailor.png' } },
-					haberdasher: { icon: { img: 'person.png', holding: 'clothier.png' } },
-					cobbler: { icon: { img: 'person.png', holding: 'cobbler.png' } },
+					clothier: {
+						icon: { img: 'person.png', holding: 'clothier.png' },
+						wealth: 'low'
+					},
+					tailor: {
+						icon: { img: 'person.png', holding: 'tailor.png' },
+						wealth: 'medium'
+					},
+					haberdasher: {
+						icon: { img: 'person.png', holding: 'clothier.png' },
+						wealth: 'low'
+					},
+					cobbler: {
+						icon: { img: 'person.png', holding: 'cobbler.png' },
+						wealth: 'medium'
+					},
 				}
 			},
 			armorer: {
 				icon: 'armor.png',
 				workforceMax: 8,
+				district: 'market',
 				jobInitHash: {
-					armorer: { mustPickFirst: true, icon: { img: 'person.png', holding: 'armor.png' } },
-					gaunter: { icon: { img: 'person.png', holding: 'armor.png' } }
+					armorer: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'armor.png' },
+						wealth: 'high'
+					},
+					gaunter: {
+						icon: { img: 'person.png', holding: 'armor.png' },
+						wealth: 'medium'
+					}
 				}
 			},
 			bowyery: {
 				icon: 'bow.png',
 				workforceMax: 6,
+				district: 'market',
 				jobInitHash: {
-					bowyer: { mustPickFirst: true, icon: { img: 'person.png', holding: 'bow.png' }  },
-					fletcher: { icon: { img: 'person.png', holding: 'fletcher.png' } }
+					bowyer: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'bow.png' },
+						wealth: 'medium'
+					},
+					fletcher: {
+						icon: { img: 'person.png', holding: 'fletcher.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			jeweler: {
 				icon: 'jeweler.png',
 				workforceMax: 4,
+				district: 'wealthy',
 				jobInitHash: {
-					jeweler: { mustPickFirst: true, icon: { img: 'person.png', holding: 'jeweler.png' } },
-					lapidary: { icon: { img: 'person.png', holding: 'lapidary.png' } }
+					jeweler: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'jeweler.png' },
+						wealth: 'high'
+					},
+					lapidary: {
+						icon: { img: 'person.png', holding: 'lapidary.png' },
+						wealth: 'medium'
+					}
 				}
 			},
 			glassBlower: {
 				icon: 'glass.png',
 				workforceMax: 8,
+				district: 'industrial',
 				jobInitHash: {
-					glassBlower: { icon: { img: 'person.png', holding: 'glass.png' } }
+					glassBlower: {
+						icon: { img: 'person.png', holding: 'glass.png' },
+						wealth: 'medium'
+					}
 				}
 			},
 			mine: {
 				icon: 'miner.png',
 				workforceMax: 40,
+				district: 'outlier',
 				jobInitHash: {
-					mineForeman: { mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'miner.png' } },
-					miner: { useIfSingular: true, icon: { img: 'person.png', holding: 'miner.png' } }
+					mineForeman: {
+						mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'miner.png' },
+						wealth: 'medium'
+					},
+					miner: {
+						useIfSingular: true, icon: { img: 'person.png', holding: 'miner.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			smithy: {
 				icon: 'smith.png',
 				workforceMax: 6,
+				district: 'industrial',
 				jobInitHash: {
-					blacksmith: { mustPickFirst: true, icon: { img: 'person.png', holding: 'smith.png' } },
-					smithApprentice: { icon: { img: 'person.png', holding: 'smith.png' } }
+					blacksmith: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'smith.png' },
+						wealth: 'medium'
+					},
+					smithApprentice: {
+						icon: { img: 'person.png', holding: 'smith.png' },
+						wealth: 'low'
+					}
 				}
 			}
 		}
@@ -264,31 +416,56 @@ let AspectTypeHash = {
 			library: {
 				icon: 'library.png',
 				workforceMax: 20,
+				district: 'residential',
+				tilesPerWorker: 5,
 				jobInitHash: {
-					librarian: { icon: { img: 'person.png', holding: 'library.png' } }
+					librarian: {
+						icon: { img: 'person.png', holding: 'library.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			school: {
 				icon: 'school.png',
 				workforceMax: 20,
+				district: 'residential',
+				tilesPerWorker: 5,
 				jobInitHash: {
-					teacher: { useIfSingular: true, icon: { img: 'person.png', holding: 'school.png' } },
-					principle: { icon: { img: 'person.png', holding: 'school.png' } }
+					principle: {
+						icon: { img: 'person.png', holding: 'school.png' },
+						wealth: 'medium'
+					},
+					teacher: {
+						useIfSingular: true, icon: { img: 'person.png', holding: 'school.png' },
+						wealth: 'low'
+					},
 				}
 			},
 			temple: {
 				icon: 'temple.png',
 				workforceMax: 12,
+				district: 'wealthy',
+				tilesPerWorker: 5,	// gives 0.25 tiles per person served.
 				jobInitHash: {
-					priest: { mustPickFirst: true, icon: { img: 'person.png', holding: 'priest.png' } },
-					acolyte: { icon: { img: 'person.png', holding: 'priest.png' } }
+					priest: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'priest.png' },
+						wealth: 'medium'
+					},
+					acolyte: {
+						icon: { img: 'person.png', holding: 'priest.png' },
+						wealth: 'low'
+					}
 				}
 			},
 			scriptorium: {
 				icon: 'scribe.png',
 				workforceMax: 8,
+				district: 'wealthy',
 				jobInitHash: {
-					scribe: { icon: { img: 'person.png', holding: 'scribe.png' } }
+					scribe: {
+						icon: { img: 'person.png', holding: 'scribe.png' },
+						wealth: 'medium'
+					}
 				}
 			}
 		}
@@ -301,17 +478,41 @@ let AspectTypeHash = {
 				icon: 'doctor.png',
 				workforceMax: 2,
 				chance: 80,
+				district: 'any',
 				jobInitHash: {
-					doctor: { mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' } },
-					nurse: { icon: { img: 'person.png', holding: 'doctor.png' } }
+					doctor: {
+						mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' },
+						wealth: 'high'
+					},
+					nurse: {
+						icon: { img: 'person.png', holding: 'doctor.png' },
+						wealth: 'medium'
+					}
 				}
 			},
 			hospital: {
 				icon: 'doctor.png',
 				workforceMax: 20,
+				district: 'wealthy',
 				jobInitHash: {
-					doctor: { mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' } },
-					nurse: { icon: { img: 'person.png', holding: 'doctor.png' } }
+					doctor: {},
+					nurse: {}
+				}
+			}
+		}
+	},
+	children: {
+		isHidden: true,
+		percentOfPopulation: 0.18,
+		venueInitHash: {
+			family: {
+				icon: 'children.png',
+				isFakeVenue: true,
+				jobInitHash: {
+					child: {
+						isChild: true, icon: 'children.png',
+						wealth: null
+					}
 				}
 			}
 		}
@@ -325,8 +526,12 @@ let AspectTypeHash = {
 			around: {
 				icon: 'beggar.png',
 				chance: 0.10,
+				isFakeVenue: true,
 				jobInitHash: {
-					bum: { icon: { img: 'person.png', holding: 'beggar.png' } }
+					bum: {
+						icon: { img: 'person.png', holding: 'beggar.png' },
+						wealth: 'low'
+					}
 				}
 			}
 		}

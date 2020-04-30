@@ -49,8 +49,8 @@ Stats.baseList = {
 
 class Person {
 	constructor(culture,community,jobType,venue,inject) {
-		console.assert( culture && community && jobType && venue );
-		console.assert( culture.isCulture && community.isCommunity && jobType.isJobType && venue.isVenue );
+		console.assert( culture && community && jobType );
+		console.assert( culture.isCulture && community.isCommunity && jobType.isJobType && (!venue || venue.isVenue) );
 		this.isPerson	= true;
 		this.culture	= culture;
 		this.community	= community;
@@ -58,7 +58,7 @@ class Person {
 		this.jobFocus	= this.jobType;
 		this.id			= Date.makeUid();
 		this.venue	= venue;
-		venue.workerAdd(this);
+		if( venue ) { venue.workerAdd(this); }
 		this.age		= culture.generateAge(jobType.isChild);
 		this.gender		= culture.generateGender();
 		this.nameFirst	= String.capitalize( this.culture.generateName(this.gender) );
@@ -219,7 +219,7 @@ class Person {
 		return this.textSummaryFull+', '+this.childTitle+' of '+this.father.textLineage;
 	}
 	get isCalledBoss() {
-		return this.isBoss && this.venue.workerCount>1;
+		return this.isBoss && this.venue && this.venue.workerCount>1;
 	}
 	get name() {
 		return this.nameFirst;

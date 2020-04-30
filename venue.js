@@ -4,6 +4,9 @@ class Structure {
 	constructor() {
 		this.peopleDaysToBuild = 100;
 		this.integrity = 1.0;	// always 0.0 - 1.0
+		this.tileRadius = null;
+		this.district = null;
+		this.circle = null;
 	}
 	get condition() {
 		return this.integrity;
@@ -16,8 +19,9 @@ class Structure {
 	}
 }
 
-class Venue {
+class Venue extends Structure {
 	constructor( type, workerCapacity ) {
+		super();
 		console.assert( type && VenueTypeHash[type.id] && workerCapacity );
 		Object.assign( this, type );
 		this.isVenue	= true;
@@ -25,8 +29,18 @@ class Venue {
 		this.id			= type.id+'.'+Date.makeUid();
 		this.workerCapacity	= workerCapacity;
 		this.workerHash	= new HashManager();
-		this.structure = new Structure();
+		this.district  = null;
 	}
+	get preferredDistrictId() {
+		return this.type.district;
+	}
+	get structureSize() {
+		return this.workerCapacity*(this.type.tilesPerWorker||1)
+	}
+	get districtId() {
+		console.assert(false);
+	}
+
 	get name() {
 		let sizeName = ['small','medium','large','huge'][Math.min(3,Math.floor(Math.sqrt(1+this.workerCapacity))-1)];
 		return sizeName+' '+this.type.id;
@@ -34,8 +48,11 @@ class Venue {
 	get text() {
 		return this.name+' is '+Math.percent(this.percentWorkerCapacity)+'% worked by '+Array.joinAnd(this.workerNameArray)
 	}
+	get textSummary() {
+		return this.name+' ('+this.workerCapacity+') makes '+this.type.produces.id;
+	}
 	get isOperational() {
-		return !this.structure.needsRepair;
+		return !this.needsRepair;
 	}
 	get workerNameArray() {
 		let nameList = [];
@@ -62,6 +79,10 @@ class Venue {
 class VenueList extends ListManager {
 	constructor() {
 		super();
+	}
+	add(venue) {
+		console.assert( venue.type.district );
+		super.add(venue);
 	}
 	peopleServed(aspectTypeId) {
 		let peopleSatisfied = this.sum( venue => venue.produces.id == aspectTypeId ? venue.workerCount : 0 );

@@ -43,6 +43,11 @@ class Visual {
 
 		this.element.style.visibility = this.visible!==false ? 'visible' : 'hidden';
 	}
+	pan(dx,dy) {
+		if( !this.element ) return;
+		this.element.style.left		+= dx;
+		this.element.style.top		+= dy;
+	}
 	link(className,footprintFn) {
 		return this.root.addElement(this,className,footprintFn);
 	}
@@ -203,6 +208,28 @@ Visual.Text = class extends Visual {
 	}
 }
 
+Visual.Circle = class extends Visual {
+	constructor(color,fill,radius,thickness=1) {
+		super();
+		this.color  = color || 'white';
+		this.fill	= fill || 'grey';
+		this.radius  = radius;
+		this.thickness = thickness;
+	}
+	render() {
+		let ctx = this.root.context;
+
+		ctx.fillStyle   = this.fill;
+		ctx.strokeStyle = this.color;
+		ctx.lineWidth	= this.thickness;
+
+		ctx.beginPath();
+		ctx.arc( this.x, this.y, this.radius, 0.0, Math.PI*2 );
+		ctx.fill();
+		ctx.stroke();
+	}
+}
+
 Visual.Arc = class extends Visual {
 	constructor(color,fill,inner,outer,start,end,thickness=1) {
 		super();
@@ -344,6 +371,9 @@ Visual.Canvas = class {
 		visual.element			= element;
 		visual.footprintFn		= footprintFn;
 		return element;
+	}
+	pan(dx,dy) {
+		this.traverse( visual => visual.pan(dx,dy) );
 	}
 	traverse(fn) {
 		Object.each( this.visual, fn );
