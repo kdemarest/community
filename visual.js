@@ -6,6 +6,32 @@ Node.prototype.on = function(...args) {
 	return this;
 }
 
+
+let ElementShadow = new class {
+	constructor() {
+		this.element = null;
+	}
+	set styleLeft(v)	{ this.element.style.left = v; }
+	set styleTop(v)		{ this.element.style.top  = v; }
+	set styleWidth(v)	{ Number.isFinite(v) ? (this.element.style.width = v) : null; }
+	set styleHeight(v)	{ Number.isFinite(v) ? (this.element.style.height = v) : null; }
+	set visibility(v)	{ this.element.style.visibility = v; }
+	set zIndex(v)		{ this.element.style.zIndex = v; }
+	set innerHTML(v)	{ this.element.innerHTML = v; }
+
+	update(element) {
+		this.element = element;
+
+		Object.each( element.footprint, (value,key) => {
+			if( value === element.footprintShadow[key] ) {
+				return;
+			}
+			this[key] = value;
+			element.footprintShadow[key] = value;
+		});
+	}
+}
+
 class Visual {
 	constructor() {
 		this.parent = null;
@@ -21,36 +47,30 @@ class Visual {
 	}
 	get height() {
 	}
-	get rect() {
-		let margin = this.margin||0;
-		return {
-			x: this.x-this.xAnchor*this.width-margin,
-			y: this.y-this.yAnchor*this.height-margin,
-			width: this.width+margin*2,
-			height: this.height+margin*2
-		}
-	}
 	add(visual) {
 		console.assert(false);
 	}
-	align() {
+	defaultAdjustFootprint() {
+		let margin = this.margin||0;
+		Object.assign( this.element.footprint, {
+			styleLeft: this.x-this.xAnchor*this.width-margin,
+			styleTop: this.y-this.yAnchor*this.height-margin,
+			styleWidth: this.width+margin*2,
+			styleHeight: this.height+margin*2
+		});
+	}
+	updateFootprint() {
 		if( !this.element ) return;
-		let r = this.footprintFn ? this.footprintFn(this) : this.rect;
-		this.element.style.left		= r.x;
-		this.element.style.top		= r.y;
-		if( r.width !== null ) {
-			this.element.style.width	= r.width;
-		}
-		if( r.height !== null ) {
-			this.element.style.height	= r.height;
-		}
 
-		this.element.style.visibility = this.visible!==false ? 'visible' : 'hidden';
+		this.footprintFn ? this.footprintFn(this) : this.defaultAdjustFootprint();
+		this.element.footprint.visible = this.visible!==false ? 'visible' : 'hidden';
+
+		ElementShadow.update( this.element );
 	}
 	pan(dx,dy) {
 		if( !this.element ) return;
-		this.element.style.left		+= dx;
-		this.element.style.top		+= dy;
+		this.element.footprint.styleLeft	+= dx;
+		this.element.footprint.styleTop		+= dy;
 	}
 	link(className,footprintFn) {
 		return this.root.addElement(this,className,footprintFn);
@@ -62,7 +82,7 @@ class Visual {
 		if( this.layoutFn ) {
 			this.layoutFn(this);
 		}
-		this.align();
+		this.updateFootprint();
 	}
 	tick(dt) {
 	}
@@ -112,20 +132,20 @@ Visual.Div = class extends Visual {
 		this._height = 0;
 		this.xPct = xPct
 		this.yPct = yPct;
-		this.content = content;
+
 		this.layoutFn = ()=>{};
 		this.footprintFn = ()=>{
-			this.element.style.zIndex = (this.root.overlay.style.zIndex||0)+1;
-			if( this.element.innerHTML != this.content ) {
-				this.element.innerHTML = this.content;
-			}
-			return {
-				x: Math.floor(this.root.width * this.xPct),
-				y: Math.floor(this.root.height * this.yPct),
-				width: null,
-				height: null
-			}
+			Object.assign( this.element.footprint, {
+				styleLeft: Math.floor(this.root.width * this.xPct),
+				styleTop: Math.floor(this.root.height * this.yPct),
+				zIndex: (this.root.overlay.style.zIndex||0)+1,
+				innerHTML: this.element.footprint.innerHTML || content
+			});
+			content = null;
 		}
+	}
+	set innerHTML(value) {
+		this.element.footprint.innerHTML = value;
 	}
 	get width() {
 		return this._width;
@@ -419,6 +439,8 @@ Visual.Canvas = class {
 	addElement(visual,className,footprintFn) {
 		let element = document.createElement("div");
 		element.style.position = "absolute";
+		element.footprint = {};
+		element.footprintShadow = {};
 		let classList = className.split(' ');
 		classList.forEach( className => element.classList.add(className) );
 		this.overlay.appendChild(element);

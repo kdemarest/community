@@ -165,7 +165,7 @@ Habit.Manager = class {
 			return;
 		}
 		if( !this.atDestination ) {
-			let movementRatePerSecond = 0.001;
+			let movementRatePerSecond = 0.003;
 			this.moveToward(this.destination,dt*movementRatePerSecond);
 			return;
 		}

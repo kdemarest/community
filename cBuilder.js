@@ -421,7 +421,8 @@ class CommunityBuilder {
 		this.layoutCity();
 
 		this.combinedList.traverse( person => {
-			person.circle = new Circle(person.id,0,0,this.community.unitCircle.radius*1);
+			let personSizeCompareToSinglePersonHouse = 0.5;
+			person.circle = new Circle(person.id,0,0,this.community.unitCircle.radius*personSizeCompareToSinglePersonHouse);
 			this.community[person.isAlive?'personList':'ancestorList'].add( person );
 		});
 

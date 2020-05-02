@@ -34,24 +34,31 @@ PanelCity.Layout = (function(root) {
 		v.x = w(0.5) + circle.x * dim*0.5 + center.x;
 		v.y = h(0.5) + circle.y * dim*0.5 + center.y;
 		v.scaleToHeight((circle.radius*2*0.5/sqrt2)*dim);
-		v.margin = 3;
+		v.margin = 1;
 		v.visible = visible;
 	}
 
 	this.structure = this.mapPos;
 	this.person    = this.mapPos;
 
-	this.mapCircle = (v,district,center,zoom,visible) => {
+	this.mapCircle = (v,circle,center,zoom,visible) => {
 		let dim = leastDim() * zoom;
-		v.x = w(0.5) + district.x * dim*0.5 + center.x;
-		v.y = h(0.5) + district.y * dim*0.5 + center.y;
-		v.fill = 'rgba(0,0,0,0)';
-		v.radius = district.radius*dim / 2;
+		v.x = w(0.5) + circle.x * dim*0.5 + center.x;
+		v.y = h(0.5) + circle.y * dim*0.5 + center.y;
+		v.radius = circle.radius*dim / 2;
 		v.visible = visible;
 	}
 
 	this.structureRadius = this.mapCircle;
 	this.district		 = this.mapCircle;
+
+	this.personCircle = (v,circle,center,zoom,visible) => {
+		this.mapCircle(v,circle,center,zoom,visible);
+		v.thickness = Math.floor(Math.max(1,0.7*zoom));
+		v.color = v.isHovered ? 'cyan' : 'white';	//'rgba(0,0,0,0)'; 
+		//v.fill = v.isHovered ? 'cyan' : 'black';
+	}
+
 
 	return this;
 });
@@ -69,17 +76,18 @@ PanelCity.Visuals = function (root) {
 	});
 
 	data.structureTraverse( structure => {
-		visuals[structure.id+'Radius'] = [ new Visual.Circle(),	(v) => layout.structureRadius(v,structure.circle,data.center,data.zoom,!data.structureRadiusHide) ];
+		visuals[structure.id+'Radius'] = [ new Visual.Circle('white','rgba(0,0,0,0)'),	(v) => layout.structureRadius(v,structure.circle,data.center,data.zoom,!data.structureRadiusHide) ];
 	});
 
 	data.district.traverse( district => {
-		visuals[district.id] = [ new Visual.Circle(), (v) => layout.district(v,district,data.center,data.zoom,!data.districtHide) ];
+		visuals[district.id] = [ new Visual.Circle('yellow','rgba(0,0,0,0)'), (v) => layout.district(v,district,data.center,data.zoom,!data.districtHide) ];
 	});
 
 	data.person.traverse( person => {
 		let icon	= person.icon;
 		console.assert(icon);
 		let holding	= person.iconHolding;
+		visuals[person.id+'Bg'] = [ new Visual.Circle('blue','black'), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
 		visuals[person.id] = [ new Visual.Sprite(holding||icon), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
 //		if( holding ) {
 //			visuals[person.id+'Held'] = [ new Visual.Sprite(holding), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
@@ -94,8 +102,7 @@ PanelCity.Visuals = function (root) {
 
 	// Must be last to draw last.
 	visuals.title	= [ new Visual.Text('white','Town Map'), (v) => layout.title(v) ];
-//	visuals.info	= [ new Visual.Text('white',''), (v) => layout.info(v,data.info) ];
-	visuals.info	= [ new Visual.Div('',0.0,0.90), (v)=>v.content = '<div class="mapInfo">'+data.info+'</div>' ];
+	visuals.info	= [ new Visual.Div('',0.0,0.90), (v)=>v.innerHTML = '<div class="mapInfo">'+data.info+'</div>' ];
 
 	return visuals;
 }
@@ -118,8 +125,7 @@ PanelCity.Elements = function(root) {
 	}();
 
 	root.div.on('wheel', function(evt) {
-		let dir = evt.deltaY;
-		data.zoom = Math.clamp( data.zoom - evt.deltaY*0.01, 0.4, 6.0 );
+		data.zoomAdjust(-evt.deltaY);
 		event.preventDefault();
 	});
 
@@ -168,8 +174,14 @@ PanelCity.Elements = function(root) {
 	data.person.traverse( person => {
 		visual[person.id].link('personButton')
 			.on('click',()=>{})
-			.on('mouseover',()=>data.setInfo(person.textRole))
-			.on('mouseout',()=>data.setInfo(''))
+			.on('mouseover',() => {
+				data.setInfo(person.textRole);
+				visual[person.id+'Bg'].isHovered=true;
+			})
+			.on('mouseout',() => {
+				data.setInfo('');
+				visual[person.id+'Bg'].isHovered=false;
+			})
 
 	});
 }

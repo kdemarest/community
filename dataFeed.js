@@ -196,6 +196,9 @@ DataFeed.City = class extends DataFeed.Base {
 		this.structureRadiusHide	= true;
 		this.districtHide			= true;
 	}
+	zoomAdjust(value) {
+		this.zoom = Math.clamp( this.zoom + value*0.01, 0.2, 12.0 );
+	}
 	structureTraverse(fn) {
 		return this.community.structureTraverse(fn);
 	}

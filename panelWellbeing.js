@@ -77,8 +77,8 @@ PanelWellbeing.Layout = (function(root) {
 	}
 
 	this.rowFootprint = (v) => {
-		let rect = v.rect;
-		rect.width = w(xInfo) - rect.x;
+		let rect = v.element.footprint;
+		rect.width = w(xInfo) - rect.styleLeft;
 		return rect;
 	}
 
@@ -115,7 +115,7 @@ PanelWellbeing.Layout = (function(root) {
 		[v.x,v.y]				= [w(xInfo+margin),h(yBodyTop+margin)];
 		[v._width,v._height]	= [w(0.95-xInfo-margin*2),h(yBodyBtm-yBodyTop-margin*2)];
 		[v.xAnchor,v.yAnchor]	= [0,0];
-		v.element.innerHTML		= text;
+		v.element.footprint.innerHTML		= text;
 	}
 
 	return this;
