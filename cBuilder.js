@@ -336,8 +336,54 @@ class CommunityBuilder {
 
 
 		// Now center the city and districts and set scale from -1.0 to 1.0
+		let unitCircle = new Circle('UNIT',0,0,1.0);
 		city.moveBy( -city.x, -city.y );
-		city.scaleBy( 1/city.radius);
+		let normalizer = 1/city.radius;
+		city.scaleBy( normalizer );
+		unitCircle.scaleBy( normalizer );
+
+		let getDist		= (dx,dy) => Math.sqrt(dx*dx+dy*dy);
+
+		let mega = new Cluster();
+		Object.each( districtHash, district => {
+			district.traverse( circle => mega.add(circle) );
+		});
+		mega.sort( (a,b)=>{
+			let aDist = getDist(a.x-mega.x,a.y-mega.y);
+			let bDist = getDist(b.x-mega.x,b.y-mega.y);
+			return aDist<bDist ? -1 : bDist>aDist ? 1 : 0;
+		});
+
+		for( let i=0 ; i<3 ; ++i ) {
+			mega.traverse( circle => {
+				let collisionList = mega.travelTo(mega.x,mega.y,circle,circle.radius*0.05);
+				if( collisionList.length == 1 && mega.length > 1 ) {
+					mega.spinAbout(collisionList[0],circle,Math.PI*2*0.01);
+				}
+			});
+		}
+
+		Object.each( districtHash, district => district.process() );
+
+		let expansion = 1.2;
+		city.expandBy( expansion );
+
+  		for( let i=0 ; i<3 ; ++i ) {
+			Object.each( districtHash, (district,d) => {
+				if( district.length <= 1 ) {
+					return;
+				}
+				let list = district.list;
+				list.forEach( circle => {
+					district.remove( c => c.id==circle.id );
+					let friend = district.findClosest(circle);
+					district.travelTo(friend.x,friend.y,circle);
+					district.add(circle);
+				});
+			});
+		}
+
+		this.community.unitCircle = unitCircle;
 
 		this.community.districtHash = new HashManager();
 		this.community.districtHash.hash = districtHash;
@@ -374,7 +420,10 @@ class CommunityBuilder {
 		// Put everything into the city
 		this.layoutCity();
 
-		this.combinedList.traverse( person => this.community[person.isAlive?'personList':'ancestorList'].add( person ) );
+		this.combinedList.traverse( person => {
+			person.circle = new Circle(person.id,0,0,this.community.unitCircle.radius*1);
+			this.community[person.isAlive?'personList':'ancestorList'].add( person );
+		});
 
 		this.initAspects();
 	}

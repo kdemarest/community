@@ -43,7 +43,7 @@ let AspectTypeHash = {
 						wealth: 'low', houseAtWorkplace: true
 					},
 					cowboy: {
-						icon: 'cowboy.png',
+						icon: { img: 'person.png', holding: 'shepherd.png' },
 						wealth: 'low', houseAtWorkplace: true
 					}
 				}
@@ -510,7 +510,8 @@ let AspectTypeHash = {
 				isFakeVenue: true,
 				jobInitHash: {
 					child: {
-						isChild: true, icon: 'children.png',
+						icon: { img: 'children.png' },
+						isChild: true,
 						wealth: null
 					}
 				}

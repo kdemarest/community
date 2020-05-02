@@ -38,8 +38,12 @@ class Visual {
 		let r = this.footprintFn ? this.footprintFn(this) : this.rect;
 		this.element.style.left		= r.x;
 		this.element.style.top		= r.y;
-		this.element.style.width	= r.width;
-		this.element.style.height	= r.height;
+		if( r.width !== null ) {
+			this.element.style.width	= r.width;
+		}
+		if( r.height !== null ) {
+			this.element.style.height	= r.height;
+		}
 
 		this.element.style.visibility = this.visible!==false ? 'visible' : 'hidden';
 	}
@@ -92,6 +96,36 @@ Visual.Blank = class extends Visual {
 		super();
 		this._width  = 0;
 		this._height = 0;
+	}
+	get width() {
+		return this._width;
+	}
+	get height() {
+		return this._height;
+	}
+}
+
+Visual.Div = class extends Visual {
+	constructor(content,xPct,yPct) {
+		super();
+		this._width  = 0;
+		this._height = 0;
+		this.xPct = xPct
+		this.yPct = yPct;
+		this.content = content;
+		this.layoutFn = ()=>{};
+		this.footprintFn = ()=>{
+			this.element.style.zIndex = (this.root.overlay.style.zIndex||0)+1;
+			if( this.element.innerHTML != this.content ) {
+				this.element.innerHTML = this.content;
+			}
+			return {
+				x: Math.floor(this.root.width * this.xPct),
+				y: Math.floor(this.root.height * this.yPct),
+				width: null,
+				height: null
+			}
+		}
 	}
 	get width() {
 		return this._width;
@@ -195,14 +229,24 @@ Visual.Text = class extends Visual {
 	}
 	render() {
 		console.assert( this.textWidth!==null || this.textHeight!==null );
+
 		let fontSize = Math.floor( this.textHeight ? this.textHeight : this.textWidthAt(100)/100*this.textWidth );
 		this.lastHeight = fontSize;
+		let w = this.textWidthAt(fontSize);
+		let crazyAnchorOffset = -0.8;
+		let tx = this.x-this.xAnchor*w;
+		let ty = this.y-(this.yAnchor+crazyAnchorOffset)*fontSize;
+
+		if( this.backgroundFill ) {
+			let p = this.backgroundPadding || 0;
+			this.root.context.fillStyle = this.backgroundFill;
+			this.root.context.fillRect( tx-p, ty-fontSize-p, w+p*2, fontSize*1.286+p*2 );
+		}
+
 		this.root.context.fillStyle = this.color;
 		this.root.context.strokeStyle = this.color;
 		this.root.context.font = ''+fontSize+'px Arial';
-		let w = this.textWidthAt(fontSize);
-		let crazyyAnchorOffset = -0.8;
-		this.root.context.fillText( this.text, this.x-this.xAnchor*w, this.y-(this.yAnchor+crazyyAnchorOffset)*fontSize );
+		this.root.context.fillText( this.text, tx, ty );
 		this.lastWidth = w;
 		super.render();
 	}
@@ -296,14 +340,23 @@ Visual.Canvas = class {
 		this.canvas.style.position = 'absolute';
 		this.context = this.canvas.getContext('2d');
 
-		this.div = document.getElementById(rootDiv);
-
-		this.div.appendChild(this.canvas);
-
 		this.overlay = document.createElement("div");
 		this.overlay.style.position = 'absolute';
-		this.overlay.style.zIndex = (this.canvas.style.zIndex||0)+1;
+		this.overlay.style.overflowX = 'hidden';
+		this.overlay.style.overflowY = 'hidden';
 
+		let domOnTop = true;
+		if( domOnTop ) {
+			this.overlay.style.zIndex = (this.canvas.style.zIndex||0)+1;
+		}
+		else {
+			this.canvas.style.zIndex = (this.overlay.style.zIndex||0)+1;
+			this.canvas.style.pointerEvents = 'none';
+		}
+
+
+		this.div = document.getElementById(rootDiv);
+		this.div.appendChild(this.canvas);
 		this.div.insertBefore(this.overlay,this.canvas)
 
 		makeComponentFn(this);
@@ -343,7 +396,7 @@ Visual.Canvas = class {
 	}
 	addVisual(id,visual,layoutFn) {
 		visual.id = id;
-		visual.layoutFn = layoutFn
+		visual.layoutFn = layoutFn || visual.layoutFn;
 		this.visual[id] = visual;
 		visual.parent = this;
 		return visual;
@@ -355,6 +408,7 @@ Visual.Canvas = class {
 		Object.each( visualHash, (pair,id) => this.addVisual( id, pair[0], pair[1] ) );
 	}
 	addElements(elements) {
+		// Intentionally empty. All elements associated with visuals are kept in the visual's class
 	}
 	addData(data) {
 		this.data = data;
@@ -365,11 +419,12 @@ Visual.Canvas = class {
 	addElement(visual,className,footprintFn) {
 		let element = document.createElement("div");
 		element.style.position = "absolute";
-		element.classList.add(className);
+		let classList = className.split(' ');
+		classList.forEach( className => element.classList.add(className) );
 		this.overlay.appendChild(element);
 		this.element[visual.id] = element;
 		visual.element			= element;
-		visual.footprintFn		= footprintFn;
+		visual.footprintFn		= footprintFn || visual.footprintFn;
 		return element;
 	}
 	pan(dx,dy) {
@@ -399,8 +454,7 @@ Visual.Canvas = class {
 		this.lay();
 	}
 	render() {
-		this.context.fillStyle = 'black';
-		this.context.fillRect(0,0,this.width,this.height);
+		this.context.clearRect(0,0,this.width,this.height);
 		this.traverse( visual => visual.visible !== false ? visual.render() : null );		
 	}
 }

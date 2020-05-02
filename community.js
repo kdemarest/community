@@ -189,6 +189,11 @@ class Community {
 		// Remove all expired events.
 		this.eventList.remove( event => event.dead );
 	}
+
+	tick(dt) {
+		this.personList.traverse( person => person.tick(dt) );
+	}
+
 	get population() {
 		return this.personList.length;
 	}

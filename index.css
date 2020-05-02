@@ -41,6 +41,8 @@ div {
 #panelCity {
 	width: 100%;
 	height: 100%;
+	overflow-x: hidden;
+	overflow-y: hidden;
 }
 
 div.iconButton {
@@ -50,6 +52,27 @@ div.iconButton:hover {
 	border: 2px solid cyan;
 	border-radius: 6px;
 }
+
+div.structureButton {
+	border: 2px solid #333;
+	border-radius: 6px;
+}
+
+div.structureButton:hover {
+	border: 2px solid cyan;
+	border-radius: 6px;
+}
+
+div.personButton {
+	border: 2px solid #333;
+	border-radius: 30px;
+}
+
+div.personButton:hover {
+	border: 2px solid green;
+	border-radius: 30px;
+}
+
 
 div.wellbeingPick:hover {
 	border: 2px solid cyan;
@@ -79,4 +102,27 @@ div.wellbeingInfo {
 	overflow-x: hidden;
 }
 
+div.genericButton {
+	background-color: black;
+	border: 2px solid #888;
+	border-radius: 4px;
+	font-weight: bold;
+	padding: 4px;
+	cursor: pointer;
+}
 
+div.genericButton:hover {
+	background-color: #333;
+}
+
+div.mapInfoCenter {
+	text-align: center;
+	width: 100%;
+}
+
+div.mapInfo {
+	display: inline-block;
+	color: cyan;
+	background-color: black;
+	padding: 3px;
+}

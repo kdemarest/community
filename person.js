@@ -66,6 +66,8 @@ class Person {
 			[jobType.id]: this.culture.generateSkillIndex()
 		};
 		this.stats		= new Stats();
+		this.circle		= null;
+		this.habit		= new Habit.Manager(this);
 
 		this.wounded	= false;
 		this.diseased	= false;
@@ -94,6 +96,15 @@ class Person {
 		let skillIndex = this.skillAt(jobId);
 		console.assert( skillIndex>=0 && skillIndex<benefit.length );
 		return benefit[skillIndex];
+	}
+
+	get icon() {
+		console.assert( this.jobType.icon.img );
+		return 'icons/'+this.jobType.icon.img;
+	}
+
+	get iconHolding() {
+		return this.jobType.icon.holding ? 'icons/'+this.jobType.icon.holding : null;
 	}
 
 	get family() {
@@ -221,6 +232,9 @@ class Person {
 	get isCalledBoss() {
 		return this.isBoss && this.venue && this.venue.workerCount>1;
 	}
+	get jobName() {
+		return this.jobType.id;
+	}
 	get name() {
 		return this.nameFirst;
 	}
@@ -287,6 +301,9 @@ class Person {
 			(andLast ? ' '+this.nameLast+(maidenName ? ' (nee '+maidenName+')' : '') : '' )+
 			' '+this.gender+this.age
 		;
+	}
+	get textRole() {
+		return String.capitalize(this.jobName)+' '+this.nameLast+' '+this.gender+this.age;
 	}
 	get textSummary() {
 		return this._textSummaryMake();
@@ -388,6 +405,10 @@ class Person {
 		console.assert(gatherFn);
 		let amount = this.productionForJob( this.jobFocus );
 		return gatherFn( this.jobFocus.produces.id, amount );
+	}
+
+	tick(dt) {
+		this.habit.tick(dt);
 	}
 }
 

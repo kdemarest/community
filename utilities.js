@@ -1,6 +1,9 @@
 // STATIC UTILITY FUNCTIONS
 Module.add('utilities',function(){
 
+	//
+	// MATH
+	//
 	Math.clamp = function(value,min,max) {
 		return Math.max(min,Math.min(max,value));
 	}
@@ -59,6 +62,11 @@ Module.add('utilities',function(){
 		n = n.substr(0,n.length-decimals)+(decimals>0 ? '.'+n.substr(n.length-decimals) : '');
 		return n.substr(-(3+decimals));
 	}
+
+	//
+	// NUMBER
+	//
+
 	Number.roman = function(num) {
 		var lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1},roman = '',i;
 		for ( i in lookup ) {
@@ -69,6 +77,11 @@ Module.add('utilities',function(){
 		}
 		return roman;
 	}
+
+	//
+	// STRING
+	//
+
 	String.validGender = function(s) {
 		return s=='M' || s=='F';
 	}
@@ -93,6 +106,7 @@ Module.add('utilities',function(){
 		return s;
 	}
 	String.padLeft = function(s,len,char=' ') {
+		s = ''+s;	// force it to become a string.
 		while( s.length < len ) {
 			s = char + s;
 		}
@@ -110,6 +124,10 @@ Module.add('utilities',function(){
 		}
 		return '('+Math.fixed(x,3)+','+Math.fixed(y,3)+')';
 	}
+
+	//
+	// ARRAY
+	//
 
 	Array.filterInPlace = function(a, condition, thisArg) {
 		let j = 0;
@@ -198,6 +216,14 @@ Module.add('utilities',function(){
 			s += a[i];
 		}
 		return s;
+	}
+
+	//
+	// OBJECT
+	//
+
+	Object.isObject = function(obj) {
+		return typeof obj=='object' && obj !== null && !Array.isArray(obj);
 	}
 
 	Object.isEmpty = function(obj) {
@@ -706,6 +732,9 @@ Module.add('utilities2',function() {
 		find( fn ) {
 			return this.list.find( fn );
 		}
+		sort( fn ) {
+			return this.list.sort( fn );
+		}
 		pick() {
 			let n = Math.randInt(0,this.list.length);
 			return this.list[n];
@@ -755,6 +784,9 @@ Module.add('utilities2',function() {
 		}
 		get count() {
 			return Object.count(this.hash);
+		}
+		find(fn) {
+			return Object.find( this.hash, fn );
 		}
 		traverse(fn) {
 			return Object.each( this.hash, fn );

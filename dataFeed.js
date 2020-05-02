@@ -188,16 +188,22 @@ DataFeed.Productivity = class extends DataFeed.Base {
 DataFeed.City = class extends DataFeed.Base {
 	constructor(community) {
 		super();
-		this.community = community;
-		this.info = '';
-		this.zoom = 1.0;
-		this.center = { x:0, y:0 };
+		this.community	= community;
+		this.info		= '';
+		this.zoom		= 1.0;
+		this.center		= { x:0, y:0 };
+		this.personHide	= false;
+		this.structureRadiusHide	= true;
+		this.districtHide			= true;
 	}
 	structureTraverse(fn) {
 		return this.community.structureTraverse(fn);
 	}
 	get district() {
 		return this.community.districtHash;
+	}
+	get person() {
+		return this.community.personList;
 	}
 	pan(dx,dy) {
 		this.center.x += dx;
@@ -207,6 +213,12 @@ DataFeed.City = class extends DataFeed.Base {
 	}
 	setInfo(text) {
 		this.info = text;
+	}
+	get clock() {
+		return this.community.clock;
+	}
+	get textClock() {
+		return this.community.clock.textFormatted({d:1,h:1,m:1});
 	}
 }
 

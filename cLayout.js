@@ -32,6 +32,10 @@ class Circle {
 		this.y *= magnitude;
 		this.radius *= magnitude;
 	}
+	expandBy(magnitude) {
+		this.x *= magnitude;
+		this.y *= magnitude;
+	}
 }
 
 class Cluster extends ListManager {
@@ -74,16 +78,6 @@ class Cluster extends ListManager {
 			});
 		}
 	}
-	collisionDetect(circle) {
-		return this.filter( c => {
-			let d = getDist( c.x-circle.x, c.y-circle.y );
-			if( d < c.radius+circle.radius ) {
-				//console.log('collide: '+String.coords(c.x,c.y)+'->'+String.coords(circle.x,circle.y)+'='+Math.fixed(d,3)+' < '+Math.fixed(c.radius,3)+'+'+Math.fixed(circle.radius,3));
-			}
-			return d < c.radius+circle.radius;
-		});
-//		return this.filter( c => withinDist( c.x-circle.x, c.y-circle.y, c.radius+circle.radius ) );
-	}
 	add(circle) {
 		super.add(circle);
 		this.process();
@@ -99,6 +93,39 @@ class Cluster extends ListManager {
 		this.radius *= magnitude;
 		this.traverse( circle => circle.scaleBy(magnitude) );
 	}
+	expandBy(magnitude) {
+		this.x *= magnitude;
+		this.y *= magnitude;
+		this.traverse( circle => circle.expandBy(magnitude) );
+		this.process();
+	}
+	findClosest(circle) {
+		let best = this.radius * 10000;
+		let found = null;
+		this.traverse( c => {
+			let d = getDist(c.x-circle.x,c.y-circle.y);
+			if( d < best ) {
+				best = d;
+				found = c;
+			}
+		});
+		return found;
+	}
+
+	collisionDetect(circle) {
+		return this.filter( c => {
+			if( c.id==circle.id ) {
+				return;
+			}
+			let d = getDist( c.x-circle.x, c.y-circle.y );
+			if( d==0 ) debugger;
+			if( d < c.radius+circle.radius ) {
+				//console.log('collide: '+String.coords(c.x,c.y)+'->'+String.coords(circle.x,circle.y)+'='+Math.fixed(d,3)+' < '+Math.fixed(c.radius,3)+'+'+Math.fixed(circle.radius,3));
+			}
+			return d < c.radius+circle.radius;
+		});
+//		return this.filter( c => withinDist( c.x-circle.x, c.y-circle.y, c.radius+circle.radius ) );
+	}
 	spinAbout(axis,circle,radStep) {
 		let dx   = circle.x-axis.x;
 		let dy	 = circle.y-axis.y;
@@ -107,46 +134,52 @@ class Cluster extends ListManager {
 		console.assert( Math.abs(cast(axis.x,axis.y,rads,dist)[0]-circle.x) <0.001 && Math.abs(cast(axis.x,axis.y,rads,dist)[1]-circle.y) < 0.001 );
 		let xOld,yOld;
 		let collisionList;
-		let repLimit = 1000;
+		let repLimit = Math.floor(Math.PI*2/(radStep*0.95));
 		do {
 			rads += radStep;
 			[xOld,yOld] = [circle.x,circle.y];
 			[circle.x,circle.y] = cast(axis.x,axis.y,rads,dist);
 			collisionList = this.collisionDetect(circle);
 		} while( --repLimit && collisionList.length == 0 );
-		console.assert( repLimit );
+		//console.assert( repLimit );
+		if( !repLimit ) {
+			console.log('Endless spin for '+circle.id+' radius '+circle.radius);
+		}
 		console.assert( collisionList[0] !== axis );
 		[circle.x,circle.y] = [xOld,yOld];
 	}
-	travelToCenter(circle,step=0.2) {
+	travelTo(xCenter,yCenter,circle,step=0.05) {
 		console.assert( Number.isFinite(this.x) && Number.isFinite(this.y) && Number.isFinite(circle.x) && Number.isFinite(circle.y) );
-		let dx = this.x-circle.x;
-		let dy = this.y-circle.y;
+		let dx = xCenter-circle.x;
+		let dy = yCenter-circle.y;
 		let dist = getDist(dx,dy);
-		dx = (dx / dist) * step;
-		dy = (dy / dist) * step;
+		dx = dx * step; //(dx / dist) * step;
+		dy = dy * step; //(dy / dist) * step;
 		console.assert( Number.isFinite(dx) && Number.isFinite(dy) );
-		let repLimit = 1000;
+		let repLimit = Math.floor(1/step+2);
 		let collisionList = null;
 		do {
 			circle.x += dx;
 			circle.y += dy;
 			collisionList = this.collisionDetect(circle);
 		} while( --repLimit && collisionList.length == 0 );
-		console.assert( repLimit );
+		if( !repLimit ) {
+			console.log('Endless travel for '+circle.id+' radius '+circle.radius);
+		}
+		//console.assert( repLimit );
 		circle.x -= dx;
 		circle.y -= dy;
-		if( collisionList.length == 1 && this.length > 1 ) {
-			this.spinAbout(collisionList[0],circle,Math.PI*2*0.01);
-		}
+		return collisionList;
 	}
 	findRandom(radius) {
 		let circle = new Circle('TEMPORARY',0,0,radius);
 		[circle.x,circle.y] = clockPick(this.x,this.y,this.radius+circle.radius);
 		console.assert( this.collisionDetect(circle).length == 0 );
 		if( this.length >0 ) {
-			this.travelToCenter(circle,circle.radius*0.05);
-			console.assert( this.collisionDetect(circle).length == 0 );
+			let collisionList = this.travelTo(this.x,this.y,circle,circle.radius*0.05);
+			if( collisionList.length == 1 && this.length > 1 ) {
+				this.spinAbout(collisionList[0],circle,Math.PI*2*0.01);
+			}	
 		}
 		return circle;
 	}
