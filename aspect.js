@@ -2,23 +2,130 @@ Module.add( 'aspect', ()=>{
 
 let Aspect = {};
 
-class Storage {
-	constructor(community) {
-		this.amount = 0;
-		this._capacity = 0;
+let Bucket = {};
+
+Bucket.Base = class {
+	constructor() {
+		this._amount = 0;
+	}
+	get amount() {
+		return this._amount;
+	}
+	set amount(value) {
+		console.assert( Number.isFinite(value) );
+		this._amount = value;
+	}
+	get isBucket() {
+		return true;
+	}
+	conduit(fn) {
+		this.conduitFn = fn;
+		return this;
+	}
+	_consume(amount) {
+		console.assert( Number.isFinite(amount) );
+		let consumed = Math.min(this.amount,amount);
+		this.amount -= consumed;
+		console.assert( Number.isFinite(consumed) );
+		return consumed;
+	}
+}
+
+Bucket.Storage = class extends Bucket.Base {
+	constructor(capacity,fullness) {
+		super();
+		console.assert( Number.isFinite(capacity) && Number.isFinite(fullness) );
+		this._capacity = capacity;
+		this.amount = capacity * fullness;
+	}
+	get gap() {
+		return 	this.capacity - this.amount;
 	}
 	get capacity() {
 		return this._capacity;
 	}
-	add(amount) {
-		this.amount = Math.clamp( this.amount+amount, 0, this.capacity );
+	set capacity(capacity) {
+		this._capacity = capacity;
+		this.amount = Math.min( this.amount, capacity );
 	}
-	consume(amount) {
-		let consumed = Math.min(this.amount,amount);
-		this.amount -= consumed;
-		return consumed;
+	fillFrom(source) {
+		let taken = source._consume(this.gap);
+		this.onResourceProduced(taken);
+	}
+	onResourceProduced(amount) {
+		console.log( this.id+' stored '+amount );
+		let oldAmount = this.amount;
+		this.amount = Math.clamp( this.amount+amount, 0, this.capacity );
+		return this.amount - oldAmount;	// how much was actually kept.
+	}
+	get consumptionPriority() {
+		return 2;
+	}
+	consumeStorageSecond(amount) {
+		return this._consume(amount);
 	}
 }
+
+Bucket.Daily = class extends Bucket.Base {
+	tickDayBegin() {
+		this.amount = 0;
+	}
+	onResourceProduced(amount) {
+		console.log( this.id+' readies '+amount );
+		this.amount = this.amount + amount;
+		return amount;	// how much was actually kept.
+	}
+	get consumptionPriority() {
+		return 1;
+	}
+	consumeVolatilesFirst(amount) {
+		return this._consume(amount);
+	}
+}
+
+Bucket.PendingPeriodic = class extends Bucket.Base {
+	constructor(period,releaseFn) {
+		super();
+		this.periodFn = typeof period == 'function' ? period : ()=>period;
+		this.releaseFn = releaseFn;
+
+		this.period = this.periodFn();
+		this.dayCount = 0;
+	}
+	tickDayBegin() {
+		this.dayCount += 1;
+		if( this.amount > 0 && this.dayCount >= this.period ) {
+			this.releaseFn(this);
+			this.amount = 0;
+			this.period = this.periodFn();
+			this.dayCount = 0;
+		}
+	}
+	onResourceProduced(amount) {
+		this.amount = this.amount + amount;
+		return amount;	// how much was actually kept.
+	}
+}
+
+Bucket.PendingChance = class extends Bucket.Base {
+	constructor(chance,variance,releaseFn) {
+		super();
+		this.chance = chance;
+		this.variance = variance;
+		this.releaseFn = releaseFn;
+	}
+	tickDayEnd() {
+		if( this.amount > 0 && Math.random() < this.chance ) {
+			this.releaseFn(this);
+			this.amount = 0;
+		}
+	}
+	onResourceProduced(amount) {
+		this.amount = this.amount + ( amount * Math.rand(1-this.variance,1+this.variance) );
+		return amount;	// how much was actually kept.
+	}
+}
+
 
 Aspect.Base = class {
 	constructor(community,setup) {
@@ -26,18 +133,63 @@ Aspect.Base = class {
 		console.assert( this.id );
 		this.isAspect  = true;
 		this.community = community;
+		this._bucketList = [];
+		this.noConsume = amount => 0;
 	}
 	init() {
 	}
+	initBuckets() {
+		Object.each( this, (bucket,id) => {
+			if( bucket instanceof Bucket.Base ) {
+				this._bucketList.push(bucket);
+				bucket.id = id;
+			}
+		});
+	}
+	traverse( fn ) {
+		return this._bucketList.forEach( fn );
+	}
 	tickDayBegin() {
+		this.traverse( bucket => bucket.tickDayBegin ? bucket.tickDayBegin() : null );
 	}
 	tickDayEnd() {
+		this.traverse( bucket => bucket.tickDayEnd ? bucket.tickDayEnd() : null );
 	}
-	onResourceProduced(amount) {
+	onResourceProduced(amount,person) {
+		console.assert( this._bucketList.length <= 1);	// You should provide routing for more than one bucket.
+		this.traverse( bucket => bucket.onResourceProduced ? bucket.onResourceProduced(amount) : null );
 	}
 	onResourceConsumed(amount) {
+		let totalConsumed = 0;
+		let consumeFn = (bucket,functionName) => {
+		 	if( bucket[functionName] ) {
+				let consumed = bucket[functionName](amount);
+				amount -= consumed;
+				totalConsumed += consumed;
+			}
+		}
+		this.traverse( bucket => consumeFn( bucket, 'consumeVolatilesFirst' ) );
+		this.traverse( bucket => consumeFn( bucket, 'consumeStorageSecond' ) );
+		return totalConsumed;
 	}
-	generateEvents() {
+	generateSituations() {
+	}
+	toDays(amount) {
+		let n = amount/this.population;
+		if( n >= 1 || Math.floor(n)===n ) {
+			return ''+Math.floor(n);
+		}
+		if( amount == 0 ) {
+			return '0';
+		}
+
+		let stem = Math.floor(n);
+		let fifths = ['\u2155','\u2155','\u2156','\u2157','\u2158']
+		let f = Math.floor( (n-stem)*5 );
+		return (stem===0 ? '' : ''+stem)+fifths[f];
+	}
+	get population() {
+		return this.community.population;
 	}
 	get production() {
 		return this.community.productionForAspect( this.id );
@@ -45,78 +197,68 @@ Aspect.Base = class {
 	get productivity() {
 		return this.production / this.community.population;
 	}
-	eventAdd(event) {
-		return this.community.eventList.add(event);
+	situationAdd(situation) {
+		return this.community.situationList.add(situation);
 	}
 }
 
 Aspect.Food = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup)
-		this.silos = new Storage();
-		this.pendingInTheFields		= 0;
-		this.daysGrown				= 0;
-		this.harvestPeriod			= 30;
-	}
-	init() {
-		// I think we need to assume that a certain amount of this is kept in people's houses
-		// And we need to consider drying techniques and so on. Some food will last much longer
-		// than others...
-		this.silos._capacity = this.community.population * 14;
-		this.silos.add( this.silos.capacity * 0.5 );
+		/*
+			farm	- every 30
+			pasture - every 5 days
+			hunting	- every day 50% chance for double yield
+			foodCaravan - arrives every 15-20 days with that much food
+			garden	- daily
+			grocery	- daily, but really it doesn't produce food in just distributes it
+		*/
+		let caravanPeriod = () => Math.randInt(10,20);
+		let pop = this.community.population;
+		console.assert(pop);
+
+		this.silos		= new Bucket.Storage(14*pop,0.5);
+		this.farm		= new Bucket.PendingPeriodic( 30, b=>this.store(b.amount,'The harvest') );
+		this.pasture	= new Bucket.PendingPeriodic(  5, b=>this.store(b.amount,'Pastured animals') );
+		this.hunting	= new Bucket.PendingChance( 0.30, 0.0, b=>this.store(b.amount,'Hunters') );
+		this.foodCaravan= new Bucket.PendingPeriodic( caravanPeriod, b=>this.store(b.amount,'A caravan') );
+		this.garden		= new Bucket.Daily();
+		this.grocery	= new Bucket.Daily();
 	}
 	get storageDays() {
-		return Math.floor(this.silos.amount / this.community.population);
+		return this.toDays(this.silos.amount);
 	}
-	generateEvents() {
-		++this.daysGrown;
-		if( this.daysGrown > this.harvestPeriod ) {
-			this.eventAdd( new Aspect.Event({
-				description: 'harvest of '+this.pendingInTheFields+' crops',
-				actionFirst: (self) => {
-					let kept = this.silos.add( this.pendingInTheFields );
-					tell( 'Harvest stored '+kept+' of '+this.pendingInTheFields+' harvested.' );
-					this.pendingInTheFields = 0;
-					self.destroy();
-				}
-			}));
-			this.daysGrown = 0;
-		}
+	store(food,sourceDescription) {
+		let amountActuallyKept = this.silos.onResourceProduced( food );
+		guiMessage( 'situation', sourceDescription+' add '+this.toDays(food)+' food.' );
 	}
-	onResourceProduced(amount) {
-		this.pendingInTheFields += amount;
-	}
-	onResourceConsumed(amount) {
-		return this.silos.consume(amount);
+	onResourceProduced(amount,person) {
+		let bucketId = person.venue.type.id;
+		console.assert( this[bucketId] && this[bucketId].isBucket );
+		this[bucketId].onResourceProduced(amount,person);
 	}
 }
 
 Aspect.Water = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup);
-		this.cisterns = new class extends Storage {
-			get capacity() { return community.householdList.bedCapacity + this.builtCapacity; }
-		}();
-		this.waterSourceActive = true;
-		this.cisterns.active = true;
+		let pop = this.community.population;
+		this.pantries = new Bucket.Storage(1*pop,1.0);	// Must be first to be consumed first.
+		this.cisterns = new Bucket.Storage(3*pop,1.0);
 	}
-	init() {
-		// Every household is assumed to be able to store a day's water per bed
-		this.cisterns.builtCapacity = this.community.population * 3;
-		this.cisterns.add( this.cisterns.capacity );
+	tickDayBegin() {
+		// Pantries capacity is determines, and everyone restocks from cisterns.
+		this.pantries.capacity = this.community.householdList.sum( household => household.bedsAvailable );
+		this.pantries.fillFrom( this.cisterns );
 	}
 	get storageDays() {
-		return Math.floor(this.cisterns.amount / this.community.population);
-	}
-	onResourceProduced(amount) {
-		if( this.waterSourceActive && this.cisterns.active ) {
-			this.cisterns.add( amount );
-		}
+		return this.toDays(this.cisterns.amount+this.pantries.amount);
 	}
 	onResourceConsumed(amount) {
-		let consumed = Math.min( this.cisterns.amount, amount );
-		this.cisterns.amount -= consumed;
-		return consumed;
+		return super.onResourceConsumed( amount );
+	}
+	onResourceProduced(amount) {
+		this.cisterns.onResourceProduced( amount );
 	}
 }
 
@@ -139,35 +281,19 @@ Aspect.Leisure = class extends Aspect.Base {
 	}
 }
 
+
 Aspect.Health = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup);
-		this.dailyEffort = new Storage();
-		this.dailyEffort._capacity = 99999999;
-	}
-	tickDayBegin() {
-		this.dailyEffort.amount = 0;
-	}
-	onResourceProduced(amount,person) {
-		// We should check the person. If they are a medic, then they only heal wounds.
-		// The would help guards preferentially, but not exclusively.
-		this.dailyEffort.add(amount);
-	}
-	onResourceConsumed(amount) {
-		return this.dailyEffort.consume(amount);
-	}
+		this.medicalHelp = new Bucket.Daily();
+	}		
 }
 
 Aspect.Gear = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup);
-		this.gearCache = new Storage();
-	}
-	init() {
-		this.gearCache._capacity = this.community.population;
-	}
-	onResourceProduced(amount) {
-		this.gearCache.add( amount );
+		let pop = this.community.population;
+		this.gearCache = new Bucket.Storage(1*pop,1.0);
 	}
 	get percentOperational() {
 		let gearCount = this.community.personList.sum( person => person.statGet('gear') > 0 );
@@ -178,19 +304,7 @@ Aspect.Gear = class extends Aspect.Base {
 Aspect.Venue = class extends Aspect.Base {
 	constructor(community,setup) {
 		super(community,setup);
-		this.dailyEffort = new Storage();
-		this.dailyEffort._capacity = 99999999;
-	}
-	tickDayBegin() {
-		this.dailyEffort.amount = 0;
-	}
-	onResourceProduced(amount,person) {
-		// We should check the person. If they are a medic, then they only heal wounds.
-		// The would help guards preferentially, but not exclusively.
-		this.dailyEffort.add(amount);
-	}
-	onResourceConsumed(amount) {
-		return this.dailyEffort.consume(amount);
+		this.construction = new Bucket.Daily();
 	}
 	get percentOperational() {
 //		this.community.venueList.traverse( venue => console.log(venue.isOperational ? venue.workerCapacity : 0,venue.id ) );
@@ -202,6 +316,7 @@ Aspect.Venue = class extends Aspect.Base {
 Aspect.Leadership = class extends Aspect.Base {
 	get production() {
 		// Someday give 50% weight to the ruler, and only 50% to all other servitors
+		debugger;
 		return super.production();
 	}
 }

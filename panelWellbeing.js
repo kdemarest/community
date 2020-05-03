@@ -7,7 +7,7 @@ PanelWellbeing.Layout = (function(root) {
 	let pieRot		= Math.PI*1.5;	// North
 	let trans		= 'rgba(0,0,0,0)';
 
-	let yTitle		= 0.14;			// the title's bottom
+	let yTitle		= 0.10;			// the title's bottom
 	let yBodyTop	= 0.20;
 	let yBodyBtm	= 0.95;
 	let yBodySpan	= (yBodyBtm-yBodyTop)/6;

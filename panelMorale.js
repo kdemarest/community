@@ -7,16 +7,16 @@ PanelMorale.Layout = (function(root) {
 	let degAtOne  = Math.PI*0.50;
 	let deg180    = Math.PI*2*0.50;
 	let arcInner  = 0.12;
-	let arcRadius = 0.28;
-	let arcFace   = (arcInner+arcRadius) * 0.50;
-	let arcIcons  = 0.36;
+	let arcOuter  = 0.22;
+	let arcFace   = (arcInner+arcOuter) * 0.50;
+	let arcIcons  = 0.30;
 	let floorTip  = 0.03;
 
 	let xCenter = ()=>root.width*0.50;
 	let yCenter = ()=>root.height*0.80;
 	let yFloor  = ()=>yCenter()+root.height*0.04;
 	let pctToRadians = (pct) => deg180+(degAtOne*pct);
-	let xHalf   = ()=>root.width * (arcRadius+floorTip);
+	let xHalf   = ()=>root.width * (arcOuter+floorTip);
 	let arcPt   = (pct,radius) => ([
 		xCenter() + Math.cos(pctToRadians(pct)) * radius * root.width,
 		yCenter() + Math.sin(pctToRadians(pct)) * radius * root.width
@@ -24,8 +24,8 @@ PanelMorale.Layout = (function(root) {
 
 	this.title = (v) => {
 		v.x = xCenter();
-		v.y = root.height * 0.08;
-		v.textHeight = Math.floor(root.height * 0.14);
+		v.y = root.height * 0.06;
+		v.textHeight = Math.floor(root.height * 0.10);
 	}
 
 	this.info = (v) => {
@@ -41,14 +41,14 @@ PanelMorale.Layout = (function(root) {
 
 	this.iconFace = (v,pct) => {
 		[v.x,v.y] = arcPt( pct, arcFace );
-		v.scaleToWidth(root.width*0.10);
+		v.scaleToWidth(root.width*0.07);
 	}
 
 	this.arc = (v,startPct,endPct)=> {
 		v.x		 = xCenter();
 		v.y		 = yCenter();
 		v.inner  = root.width * arcInner;
-		v.outer  = root.width * arcRadius;
+		v.outer  = root.width * arcOuter;
 		v.start  = pctToRadians(startPct);
 		v.end    = pctToRadians(endPct);
 		console.assert( Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.inner) && Number.isFinite(v.outer) && Number.isFinite(v.start) && Number.isFinite(v.end) );
@@ -65,8 +65,8 @@ PanelMorale.Layout = (function(root) {
 	}
 
 	this.lineVert = (v) => {
-		[v.x,v.y]   = arcPt(1.0,arcRadius-0.02);
-		[v.ex,v.ey] = arcPt(1.0,arcRadius+0.02);
+		[v.x,v.y]   = arcPt(1.0,arcOuter-0.02);
+		[v.ex,v.ey] = arcPt(1.0,arcOuter+0.02);
 		v.thickness = 3;
 	}
 

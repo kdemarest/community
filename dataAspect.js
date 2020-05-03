@@ -14,11 +14,12 @@ let AspectTypeHash = {
 		percentOfPopulation: 0.20,
 		venueInitHash: {
 			farm: {
-				icon: 'farm.png',
+				icon: 'field.png',
+				whatProduced: 'crops',
 				workforceRatio: 0.50,
 				workforceMax: 50,
 				district: 'outlier',
-				tilesPerWorker: 14,
+				tilesPerWorker: 6,
 //				domicile: { farmhouse: 9 },		// 9 tiles per inhabitant; if domicile not specified, it is just a house:9
 //				venue: { field: 15 },		// if not specified, it is the same as the venuename
 				jobInitHash: {
@@ -33,10 +34,11 @@ let AspectTypeHash = {
 				}
 			},
 			pasture: {
-				icon: 'field.png',
+				icon: 'pasture.png',
+				whatProduced: 'meat',
 				workforceMax: 20,
 				district: 'outlier',
-				tilesPerWorker: 20,
+				tilesPerWorker: 6,
 				jobInitHash: {
 					shepherd: {
 						icon: { img: 'person.png', holding: 'shepherd.png' },
@@ -48,8 +50,22 @@ let AspectTypeHash = {
 					}
 				}
 			},
+			hunting: {
+				icon: 'huntingGrounds.png',
+				whatProduced: 'game',
+				workforceMax: 3,
+				district: 'outlier',
+				tilesPerWorker: 6,
+				jobInitHash: {
+					hunter: {
+						icon: { img: 'person.png', holding: 'hunter.png' },
+						wealth: 'low',
+					},
+				}
+			},
 			foodCaravan: {
 				icon: 'muleFood.png',
+				whatProduced: 'preserves',
 				isTradeRoute: true,
 				workforceMax: 20,
 				district: 'market',
@@ -62,6 +78,7 @@ let AspectTypeHash = {
 			},
 			garden: {
 				icon: 'garden.png',
+				whatProduced: 'vegetables',
 				neverPickFirst: true,
 				workforceMax: 5,
 				district: 'residential',
@@ -79,6 +96,7 @@ let AspectTypeHash = {
 			},
 			grocery: {
 				icon: 'grocery.png',
+				whatProduced: 'preserves',
 				neverPickFirst: true,
 				workforceMax: 10,
 				district: 'market',

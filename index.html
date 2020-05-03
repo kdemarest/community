@@ -6,12 +6,13 @@
 <link rel="stylesheet" type="text/css" href="index.css">
 
 <script src="jquery.3.3.1.js" charset="utf-8"></script>
-<script src="https://cdn.jsdelivr.net/npm/jimp@0.10.3/browser/lib/jimp.min.js" charset="utf-8"></script>
 <script src="utilModule.js" charset="utf-8"></script>
+<script src="utilDebug.js" charset="utf-8"></script>
 
 <script src="utilities.js" charset="utf-8"></script>
 <script src="utilPick.js" charset="utf-8"></script>
 <script src="time.js" charset="utf-8"></script>
+<script src="clock.js" charset="utf-8"></script>
 
 <script src="dataNames.js" charset="utf-8"></script>
 <script src="dataCulture.js" charset="utf-8"></script>
@@ -42,6 +43,12 @@
 
 Module.realize();
 
+window.Debug = DebugSetup({
+	inception: false,
+	production: true,
+	household: false,
+});
+
 
 console.assert = function(n) {
 	if( !n ) {
@@ -62,7 +69,7 @@ for( let i=0 ; i<80 ; ++i ) {
 */
 
 
-Aspect.Event = class {
+Aspect.Situation = class {
 	constructor(data) {
 		Object.assign( this, data );
 		this.isFirstDay = true;
@@ -70,19 +77,19 @@ Aspect.Event = class {
 	destroy() {
 		this.dead = true;
 		if( this.onDestroy ) {
-			this.onDestroy.call(this);
+			this.onDestroy.call(this,this);
 		}
 	}
 	tickDay() {
 		if( this.isFirstDay ) {
-			if( this.actionFirst ) {
-				this.actionFirst.call(this);
+			if( this.onFirstDay ) {
+				this.onFirstDay.call(this,this);
 			}
 			this.isFirstDay = false
 			if( this.dead ) return;
 		}
-		if( this.onTick ) {
-			this.onTick.call(this);
+		if( this.onDaily ) {
+			this.onDaily.call(this,this);
 		}
 	}
 }
@@ -119,13 +126,12 @@ class ViewPanel extends ViewObserver {
 			}
 			this.dirty = true;
 		}
-	}
-	tick(dt) {
-		if( this.community.day !== this.lastDay ) {
+		if( msg == 'dataDirty' ) {
 			this.panel.data.update();
 			this.dirty = true;
-			this.lastDay = this.community.day;
 		}
+	}
+	tick(dt) {
 this.dirty = true;
 
 		this.panel.tick(dt);
@@ -135,77 +141,33 @@ this.dirty = true;
 	}
 }
 
-class DayTime {
-	constructor(time=0) {
-		this.time = time;
+class ViewSituation extends ViewObserver {
+	constructor(divId) {
+		super();
+		this.divId = divId;
 	}
-	set(value) {
-		this.time = value;
+	get div() {
+		return document.getElementById(this.divId);
 	}
-	get day() {
-		return Math.floor(this.time/(24*60*60*1000));
-	}
-	get hour() {
-		return Math.floor(this.time/(60*60*1000)) % 24;
-	}
-	get minute() {
-		return Math.floor(this.time/(60*1000)) % 60;
-	}
-	get second() {
-		return Math.floor(this.time/(1*1000)) % 60;
-	}
-	get milli() {
-		return Math.floor(this.time) % 1000;
-	}
-	advanceDays(days) {
-		this.time += days * 24*60*60*1000;
-	}
-	advanceHours(hours) {
-		this.time += hours * 60*60*1000;
-	}
-	advanceMinutes(minutes) {
-		this.time += minutes * 60*1000;
-	}
-	aheadMinutes(minutes) {
-		return new DayTime(this.time + minutes*(60*1000));
-	}
-	textFormatted(part) {
-		console.assert(part);
-		let s = '';
-		if( part.d ) {
-			s += String.padLeft(this.day,4)+'d';
+	message( msg, payload ) {
+		super.message(...arguments);
+		if( msg == 'situation' ) {
+			let atBottom = this.div.scrollHeight - this.div.offsetHeight - this.div.scrollTop < 1;
+			let textNode = document.createElement('div');
+			textNode.innerHTML = payload;
+			this.div.appendChild(textNode);
+			if( atBottom ) {
+				this.div.scrollTop = this.div.scrollHeight;
+			}
 		}
-		if( part.h ) {
-			s += (part.d?' ':'')+String.padLeft(this.hour,2,'0');
-		}
-		if( part.m ) {
-			s += (part.h?':':'')+String.padLeft(this.minute,2,'0');
-		}
-		if( part.s ) {
-			s += (part.m?':':'')+String.padLeft(this.second,2,'0');
-		}
-		return s;
-	}
-}
-
-class Clock extends DayTime {
-	constructor(rate) {
-		super(0);
-		this.rate = rate * 60;
-	}
-	advance(dt) {
-		this.time += dt * this.rate;
-	}
-	tick(dt) {
-		this.advance(dt);
 	}
 }
 
 
 function main() {
-	let population = 60;
+	let population = 20;
 
-	let clock = new Clock(1.0);
+	let clock = new Time.Clock(1.0);
 
 
 	let community = new Community( new CultureBase(Name.gnomeFirst,Name.gnomeLast) );
@@ -213,11 +175,11 @@ function main() {
 
 	community.communityBuilder.build(population);
 
-	community.venueList.dump();
-	community.personList.dump();
-	community.householdList.dump();
-	console.log( community.personList.map( person => person.textLineage ).join('\n') );
-	console.log( "Population="+community.population+" and "+community.ancestorList.length+" dead" );
+	console.logInception( community.venueList.map( obj => obj.text ).join('\n') );
+	console.log( community.personList.map( obj => obj.text ).join('\n') );
+	console.logInception( community.householdList.map( obj => obj.text ).join('\n') );
+	console.logInception( community.personList.map( person => person.textLineage ).join('\n') );
+	console.logInception( "Population="+community.population+" and "+community.ancestorList.length+" dead" );
 
 	community.dataFeed = {};
 	community.dataFeed.wellbeing 	= new DataFeed.Wellbeing(community);
@@ -262,6 +224,7 @@ function main() {
 		root.visible = true;
 	});
 
+	let viewSituation = new ViewSituation( 'viewSituation' );
 
 	let observer = {
 		community: community
@@ -273,6 +236,7 @@ function main() {
 		this.add('morale', viewMorale );
 		this.add('wellbeing', viewWellbeing );
 		this.add('city', viewCity );
+		this.add('situation', viewSituation );
 	});
 	guiMessage( 'observer', observer );
 
@@ -284,8 +248,25 @@ function main() {
 		window.dispatchEvent(event);
 	}, 100 );
 
+	let famineHappened;
+	function hackTick(dt) {
+		if( !famineHappened ) {
+			famineHappened = true;
+			community.situationList.add( new Aspect.Situation({
+				community: community,
+				description: 'Famine!',
+				onFirstDay: (sitch) => {
+					sitch.community.aspect.food.silos.amount = 0;
+					guiMessage( 'situation', 'Famine! All stored food wiped out!' );
+					sitch.destroy();
+				}
+			}));
+		}
+	}
+
 
 	Time.animationFrameTicker( dt => {
+		hackTick(dt);
 		clock.tick(dt);
 		community.tick(dt);
 		gui.tick(dt);
@@ -298,23 +279,6 @@ function onResize() {
 //		'#guiCity': {
 //			height: self => $('window').height()
 //		}
-/*
-		'#guiMain': {
-			height: self => $('body').height() - self.offset().top - parseInt(self.css('margin-bottom'))
-		},
-		'#panelProductivity': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.50 ),
-			width:  self => $(self).height()*1.5
-		},
-		'#panelWellbeing': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
-			width:  self => $(self).height()*1.5
-		},
-		'#panelMorale': {
-			height: self => Math.max( 100, $('#guiMain').height()*0.40 ),
-			width:  self => $(self).height()*1.5
-		}
-*/
 	});
 }
 
@@ -336,9 +300,13 @@ function onResize() {
 			<div id="guiCommunity">
 				<div id="panelProductivity">
 				</div>
-				<div id="panelMorale" style="position:absolute;">
+				<div id="guiSubPanels">
+					<div id="panelMorale" style="position:absolute;">
+					</div>
+					<div id="panelWellbeing" style="position:absolute;">
+					</div>
 				</div>
-				<div id="panelWellbeing" style="position:absolute;">
+				<div id="viewSituation">
 				</div>
 			</div>
 		</div>

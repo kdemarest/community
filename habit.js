@@ -85,7 +85,7 @@ Habit.Manager = class {
 		this.person.community.venueList.traverse( venue => {
 			if( criteriaFn(venue) ) {
 				let dist2 = Distance.squared(venue.circle.x-origin.x,venue.circle.y-origin.y);
-				if( dist2 < Distance.squared(venue.circle.radius,0) ) {
+				if( dist2 < closestDist2 ) {
 					closestDist2 = dist2;
 					closestVenue = venue;
 				}

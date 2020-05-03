@@ -5,9 +5,11 @@ let daysForGearToDie = 100;
 
 class Stats {
 	constructor() {
-		this.list = Object.assign( {}, Stats.baseList );
+		this.list = {};
+		Object.each( Stats.baseList, (stat,statId) => {
+			this.list[statId] = Object.assign( {}, stat );
+		});
 		this.traverse( (stat,statId) => {
-			stat.id = statId;
 			stat.value = stat.max;
 		});
 	}
@@ -34,6 +36,7 @@ class Stats {
 		this.validate(statId);
 		let stat = this.list[statId];
 		stat.value = Math.clamp( stat.value - stat.dailyLoss, 0, stat.max );
+		return stat.dailyLoss;
 	}
 }
 
@@ -46,6 +49,11 @@ Stats.baseList = {
 	well:	{ increment:  0.1, max:  1, dailyLoss: 0 },
 	gear:	{ increment:  1/daysForGearToDie, max:  1, dailyLoss: 1/daysForGearToDie },
 };
+
+Object.each( Stats.baseList, (stat,statId) => {
+	stat.id = statId;
+});
+
 
 class Person {
 	constructor(culture,community,jobType,venue,inject) {
@@ -85,19 +93,6 @@ class Person {
 	statDaily(id) {
 		this.stat[id]
 	}
-	skillAt(jobId) {
-		let skillIndex = this._skillRating[jobId] || 0;		
-		return skillIndex;
-	}
-	skillBenefit(jobId) {
-		let benefit = [0.7,1.0,1.3,1.6];
-
-		console.assert( typeof jobId == 'string' );
-		let skillIndex = this.skillAt(jobId);
-		console.assert( skillIndex>=0 && skillIndex<benefit.length );
-		return benefit[skillIndex];
-	}
-
 	get icon() {
 		console.assert( this.jobType.icon.img );
 		return 'icons/'+this.jobType.icon.img;
@@ -355,25 +350,57 @@ class Person {
 			Math.min(
 				this.statGet('food'),
 				this.statGet('water'),
-				this.statGet('leisure'),
 				this.statGet('sleep'),
+				this.statGet('leisure'),
 				this.statGet('whole'),
 				this.statGet('well')
 			), 0, 1.0
 		);
 	}
+
+	setSurrogate(jobType) {
+		this.surrogate = this.surrogate || {};
+		this.surrogate[jobType.produces.id] = jobType;
+		this._skillRating[jobType.id] = this.culture.generateSkillIndex();
+	}
+
+	skillAt(jobId) {
+		let skillIndex = this._skillRating[jobId] || 0;		
+		return skillIndex;
+	}
+
+	skillBenefit(jobId) {
+		let benefit = [0.7,1.0,1.3,1.6];
+
+		console.assert( typeof jobId == 'string' );
+		let skillIndex = this.skillAt(jobId);
+
+		console.assert( skillIndex>=0 && skillIndex<benefit.length );
+		return benefit[skillIndex];
+	}
+
+	moraleForJobType(jobType) {
+		let skillBenefit	= this.skillBenefit(jobType.id);
+		let wisdom			= this.community.getWisdom(jobType);
+		// We take the min here so that very small populations don't benefit unduly from the
+		// problem of small numbers.
+		let impact			= Math.min( jobType.workerImpact, this.community.population );
+
+		return (skillBenefit+wisdom) * impact;
+	}
+
 	moraleForAspect(aspectId) {
 		// Notice that even if I'm doing something else, I still produce
-		// the morale  associated with my main job.
+		// the morale associated with my main job.
+		if( this.surrogate && this.surrogate[aspectId] ) {
+			let surrogatesDiminish = 0.80;
+			return this.moraleForJobType( this.surrogate[aspectId] ) * surrogatesDiminish;
+		}
+
 		if( this.jobType.produces.id != aspectId ) {
 			return 0;
 		}
-		let skillBenefit	= this.skillBenefit(this.jobType.id);
-		let wisdom			= this.community.getWisdom(this.jobType);
-		let wellbeing		= this.wellbeing;
-		let impact			= this.jobType.workerImpact;
-
-		return (skillBenefit+wisdom) * wellbeing * impact;
+		return this.moraleForJobType( this.jobType );
 	}
 	productionBaselineForJob(jobId) {
 		let skillBenefit	= this.skillBenefit(jobId);
@@ -403,7 +430,7 @@ class Person {
 	}
 	produce(gatherFn) {
 		console.assert(gatherFn);
-		let amount = this.productionForJob( this.jobFocus );
+		let amount = this.productionForAspect( this.jobFocus.produces.id );
 		return gatherFn( this.jobFocus.produces.id, amount );
 	}
 
@@ -411,6 +438,8 @@ class Person {
 		this.habit.tick(dt);
 	}
 }
+
+Person.Stats = Stats;
 
 class PersonList extends ListManager {
 	constructor(validatorFn) {

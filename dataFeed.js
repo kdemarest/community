@@ -20,13 +20,13 @@ DataFeed.Wellbeing = class extends DataFeed.Base {
 				statId: 'water',
 				icon: 'icons/water.png'
 			},
-			overworked: {
-				statId: 'leisure',
-				icon: 'icons/leisure.png'
-			},
 			homeless: {
 				statId: 'sleep',
 				icon: 'icons/household.png'
+			},
+			overworked: {
+				statId: 'leisure',
+				icon: 'icons/leisure.png'
 			},
 			wounded: {
 				statId: 'whole',
@@ -57,7 +57,8 @@ DataFeed.Wellbeing = class extends DataFeed.Base {
 		this.$waterStorage = this.community.aspect.water.storageDays;
 		this.$wbValue = {};
 		this.traverse( wb => {
-			this.$wbValue[wb.id] = 1-this.community.getStatAverage( wb.statId );
+			let statValue = 1-this.community.getStatAverage( wb.statId );
+			this.$wbValue[wb.id] = statValue;
 		});
 
 		this.$worst = (() => {
@@ -197,7 +198,7 @@ DataFeed.City = class extends DataFeed.Base {
 		this.districtHide			= true;
 	}
 	zoomAdjust(value) {
-		this.zoom = Math.clamp( this.zoom + value*0.01, 0.2, 12.0 );
+		this.zoom = Math.clamp( this.zoom + value*0.005, 0.2, 12.0 );
 	}
 	structureTraverse(fn) {
 		return this.community.structureTraverse(fn);

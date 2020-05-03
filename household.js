@@ -34,12 +34,12 @@ class Household extends Structure {
 	}
 	hasBedFor( person ) {
 		let index = this.memberList.indexOf( person );
-		return this.bedCount > index;
+		return this.bedsAvailable > index;
 	}
 	add(person) {
 		this.memberList.push(person);
 		person._household = this;
-		console.log('Add '+person.textSummary+' to household '+this.text);
+		console.logHousehold('Add '+person.textSummary+' to household '+this.text);
 	}
 	get head() {
 		if( this.memberList.length == 1 ) {

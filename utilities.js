@@ -330,6 +330,7 @@ Module.add('utilities',function(){
 		}
 		return result;
 	}
+	// Creates a result object.
 	Object.extract = function(obj,memberId) {
 		let result = {};
 		for( let key in obj ) {
@@ -720,6 +721,10 @@ Module.add('utilities2',function() {
 			this.list.push( element );
 			return element;
 		}
+		duplicate() {
+			let m = new ListManager( this.list.slice(), this.validatorFn );
+			return m;
+		}
 		filter( fn ) {
 			return this.list.filter(fn);
 		}
@@ -734,6 +739,21 @@ Module.add('utilities2',function() {
 		}
 		sort( fn ) {
 			return this.list.sort( fn );
+		}
+		best( fn ) {
+			let bestDelta = null;
+			let bestElement = null;
+			this.traverse( element => {
+				let delta = fn(element);
+				if( delta === false ) {
+					return;
+				}
+				if( bestDelta === null || delta < bestDelta ) {
+					bestDelta = delta;
+					bestElement = element;
+				}
+			});
+			return bestElement;
 		}
 		pick() {
 			let n = Math.randInt(0,this.list.length);
@@ -761,9 +781,6 @@ Module.add('utilities2',function() {
 			let a = Array.shuffle( this.list );
 			console.assert( a===this.list && a[0] !== undefined ); 
 			return this.list;
-		}
-		dump() {
-			this.traverse( element => console.log( element.text ? element.text : element ) );
 		}
 	}
 

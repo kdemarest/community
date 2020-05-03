@@ -5,7 +5,7 @@ let PanelCity = {};
 PanelCity.Layout = (function(root) {
 
 	let sqrt2		= Math.sqrt(2);
-	let yTitle		= 0.08;			// the title's bottom
+	let yTitle		= 0.05;			// the title's bottom
 	let yInfo		= 0.95;
 	let yInfoSpan	= 0.05;
 	let xClock		= 0.10;

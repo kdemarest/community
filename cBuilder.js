@@ -328,7 +328,7 @@ class CommunityBuilder {
 
 		Object.each( districtHash, (district,d) => {
 			if( !district.isOutlier ) return;
-			console.log( "outlier: "+district.id );
+//			console.log( "outlier: "+district.id );
 			let circle = city.findRandom(district.radius);
 			district.moveBy(-district.x+circle.x, -district.y+circle.y);
 			city.add( district );
@@ -390,12 +390,8 @@ class CommunityBuilder {
 
 		this.community.venueList.traverse( venue => {
 			if( !venue.district ) return;
-			console.log(venue.id,Math.floor(venue.circle.x*100),Math.floor(venue.circle.y*100),Math.floor(venue.circle.radius*100));
+//			console.log(venue.id,Math.floor(venue.circle.x*100),Math.floor(venue.circle.y*100),Math.floor(venue.circle.radius*100));
 		});
-	}
-
-	initAspects() {
-		this.community.aspectHash.traverse( aspect => aspect.init() );
 	}
 
 	build(population) {
@@ -426,7 +422,11 @@ class CommunityBuilder {
 			this.community[person.isAlive?'personList':'ancestorList'].add( person );
 		});
 
-		this.initAspects();
+		this.community.initAspects();
+
+		this.community.assignMoraleSurrogates();
+
+		this.community.isBuilt = true;
 	}
 }
 
