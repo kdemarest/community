@@ -1,17 +1,5 @@
 Module.add( 'cityLayout', ()=>{
 
-let getDist		= (dx,dy) => Math.sqrt(dx*dx+dy*dy);
-let withinDist	= (dx,dy,dist) => dx*dx+dy*dy < dist*dist;
-let cast		= (cx,cy,rads,radius) => [cx+Math.cos(rads)*radius,cy+Math.sin(rads)*radius];
-let clockPick	= (cx,cy,radius) => {
-	console.assert( Number.isFinite(cx) && Number.isFinite(cy) && Number.isFinite(radius) );
-	let rads = Math.random()*2*Math.PI;
-	let x = cx+Math.cos(rads)*(radius+0.00001);
-	let y = cy+Math.sin(rads)*(radius+0.00001);
-	console.assert( getDist(x-cx,y-cy) >= radius );
-	return [x,y];
-}
-
 class Circle {
 	constructor(id,x,y,radius) {
 		this.id = id;
@@ -74,7 +62,7 @@ class Cluster extends ListManager {
 			this.traverse( circle => {
 				let dx = circle.x-this.x;
 				let dy = circle.y-this.y;
-				this.radius = Math.max( this.radius, getDist(dx,dy)+circle.radius );
+				this.radius = Math.max( this.radius, Distance.get(dx,dy)+circle.radius );
 			});
 		}
 	}
@@ -103,7 +91,7 @@ class Cluster extends ListManager {
 		let best = this.radius * 10000;
 		let found = null;
 		this.traverse( c => {
-			let d = getDist(c.x-circle.x,c.y-circle.y);
+			let d = Distance.get(c.x-circle.x,c.y-circle.y);
 			if( d < best ) {
 				best = d;
 				found = c;
@@ -117,28 +105,30 @@ class Cluster extends ListManager {
 			if( c.id==circle.id ) {
 				return;
 			}
-			let d = getDist( c.x-circle.x, c.y-circle.y );
+			let d = Distance.get( c.x-circle.x, c.y-circle.y );
 			if( d==0 ) debugger;
 			if( d < c.radius+circle.radius ) {
 				//console.log('collide: '+String.coords(c.x,c.y)+'->'+String.coords(circle.x,circle.y)+'='+Math.fixed(d,3)+' < '+Math.fixed(c.radius,3)+'+'+Math.fixed(circle.radius,3));
 			}
 			return d < c.radius+circle.radius;
 		});
-//		return this.filter( c => withinDist( c.x-circle.x, c.y-circle.y, c.radius+circle.radius ) );
 	}
 	spinAbout(axis,circle,radStep) {
 		let dx   = circle.x-axis.x;
 		let dy	 = circle.y-axis.y;
-		let dist = getDist(dx,dy);
+		let dist = Distance.get(dx,dy);
 		let rads = Math.atan2(dy,dx);
-		console.assert( Math.abs(cast(axis.x,axis.y,rads,dist)[0]-circle.x) <0.001 && Math.abs(cast(axis.x,axis.y,rads,dist)[1]-circle.y) < 0.001 );
+		console.assert(
+			Math.abs(Distance.cast(axis.x,axis.y,rads,dist)[0]-circle.x) <0.001 &&
+			Math.abs(Distance.cast(axis.x,axis.y,rads,dist)[1]-circle.y) < 0.001
+		);
 		let xOld,yOld;
 		let collisionList;
 		let repLimit = Math.floor(Math.PI*2/(radStep*0.95));
 		do {
 			rads += radStep;
 			[xOld,yOld] = [circle.x,circle.y];
-			[circle.x,circle.y] = cast(axis.x,axis.y,rads,dist);
+			[circle.x,circle.y] = Distance.cast(axis.x,axis.y,rads,dist);
 			collisionList = this.collisionDetect(circle);
 		} while( --repLimit && collisionList.length == 0 );
 		//console.assert( repLimit );
@@ -149,14 +139,16 @@ class Cluster extends ListManager {
 		[circle.x,circle.y] = [xOld,yOld];
 	}
 	travelTo(xCenter,yCenter,circle,step=0.05) {
+		console.assert( Number.isFinite(step) && step != 0);
 		console.assert( Number.isFinite(this.x) && Number.isFinite(this.y) && Number.isFinite(circle.x) && Number.isFinite(circle.y) );
 		let dx = xCenter-circle.x;
 		let dy = yCenter-circle.y;
-		let dist = getDist(dx,dy);
+		let dist = Distance.get(dx,dy);
 		dx = dx * step; //(dx / dist) * step;
 		dy = dy * step; //(dy / dist) * step;
 		console.assert( Number.isFinite(dx) && Number.isFinite(dy) );
-		let repLimit = Math.floor(1/step+2);
+		let repLimit = Math.floor(1/(step||1)+2);
+		console.assert( Number.isFinite(repLimit) );
 		let collisionList = null;
 		do {
 			circle.x += dx;
@@ -173,7 +165,7 @@ class Cluster extends ListManager {
 	}
 	findRandom(radius) {
 		let circle = new Circle('TEMPORARY',0,0,radius);
-		[circle.x,circle.y] = clockPick(this.x,this.y,this.radius+circle.radius);
+		[circle.x,circle.y] = Distance.clockPick(this.x,this.y,this.radius+circle.radius);
 		console.assert( this.collisionDetect(circle).length == 0 );
 		if( this.length >0 ) {
 			let collisionList = this.travelTo(this.x,this.y,circle,circle.radius*0.05);

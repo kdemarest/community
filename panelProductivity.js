@@ -140,15 +140,11 @@ PanelProductivity.Elements = (function(root) {
 		.on('click',()=>{})
 	;
 	visual.morale.link('iconButton')
-//		.on('click',()=> { this.panelKeep=!this.panelKeep; if( !this.panelKeep ) guiMessage('panelHide','panelMorale'); })
-		.on('mouseover',()=>guiMessage('panelShow','panelMorale'))
-//		.on('mouseout',()=>!this.panelKeep ? guiMessage('panelHide','panelMorale'):null)
+		.on('mouseover',()=>guiMessage('viewShow','viewMorale'))
 
 	;
 	visual.wellbeing.link('iconButton')
-//		.on('click',()=>guiMessage('panelShow','panelWellbeing'))
-		.on('mouseover',()=>guiMessage('panelShow','panelWellbeing'))
-//		.on('mouseout',()=>guiMessage('panelHide','panelWellbeing'))
+		.on('mouseover',()=>guiMessage('viewShow','viewWellbeing'))
 	;
 	visual.gear.link('iconButton')
 		.on('click',()=>{})

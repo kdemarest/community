@@ -1,6 +1,8 @@
 Module.add('views',function() {
 
-class ViewObserver {
+let View = {};
+
+View.Observer  = class {
 	constructor() {
 		this.observerDefault = null;
 		this.observerOverride = null;
@@ -46,7 +48,7 @@ class ViewObserver {
 }
 
 return {
-	ViewObserver: ViewObserver,
+	View: View
 }
 
 });

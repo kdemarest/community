@@ -36,6 +36,8 @@
 <script src="panelWellbeing.js" charset="utf-8"></script>
 <script src="panelProductivity.js" charset="utf-8"></script>
 <script src="panelCity.js" charset="utf-8"></script>
+<script src="viewPanel.js" charset="utf-8"></script>
+<script src="viewSituation.js" charset="utf-8"></script>
 
 <script src="dataFeed.js" charset="utf-8"></script>
 
@@ -94,75 +96,36 @@ Aspect.Situation = class {
 	}
 }
 
-
-class ViewPanel extends ViewObserver {
-	constructor(divId,makeComponentFn) {
-		super();
-		this.divId = divId;
-		this.panel = new Visual.Canvas( divId, makeComponentFn );
-		this.lastDay = -1;
-	}
-	get community() {
-		return this.observer.community;
-	}
-	message(msg,payload) {
-		super.message(msg,payload);
-		if( msg == 'panelShow' ) {
-			if( this.divId == payload ) {
-				this.panel.visible = true;
-			}
-			else {
-				let myTier = Gui.panelTier[this.divId];
-				let tier   = Gui.panelTier[payload];
-				if( tier == myTier ) {
-					this.panel.visible = false;
-				}
-			}
-			this.dirty = true;
-		}
-		if( msg == 'panelHide' ) {
-			if( this.divId == payload ) {
-				this.panel.visible = false;
-			}
-			this.dirty = true;
-		}
-		if( msg == 'dataDirty' ) {
-			this.panel.data.update();
-			this.dirty = true;
-		}
-	}
-	tick(dt) {
-this.dirty = true;
-
-		this.panel.tick(dt);
-	}
-	render() {
-		this.panel.render();
-	}
-}
-
-class ViewSituation extends ViewObserver {
+View.Household = class extends View.Showable {
 	constructor(divId) {
-		super();
-		this.divId = divId;
+		super(divId);
 	}
-	get div() {
-		return document.getElementById(this.divId);
+	setVisible(value) {
+		this.div.style.display = value ? 'block' : 'none';
 	}
 	message( msg, payload ) {
 		super.message(...arguments);
-		if( msg == 'situation' ) {
-			let atBottom = this.div.scrollHeight - this.div.offsetHeight - this.div.scrollTop < 1;
-			let textNode = document.createElement('div');
-			textNode.innerHTML = payload;
-			this.div.appendChild(textNode);
-			if( atBottom ) {
-				this.div.scrollTop = this.div.scrollHeight;
+		if( msg == 'showHousehold' ) {
+			let household = payload;
+			let s = '<div><b>The '+household.textTitle+' Home</b></div>';
+			let valueOf = (person) => {
+				if( person===household.head ) return 110;
+				if( person.isHusband ) return 100;
+				if( person.isWife ) return 90;
+				if( person.isMinor ) return person.age;
+				if( !person.isSingle ) return 7;
+				return 0;
 			}
+			let m = household.memberList.slice();
+			m.sort( (a,b) => Math.sign( valueOf(b)-valueOf(a) ) );
+			let headSurname = household.head.nameLast;
+			s += m.map( p => String.capitalize(p.textFamilyRole+' '+p.nameFirst+(p.nameLast!=headSurname?' '+p.nameLast:'')+' '+p.textGenderAge+' '+p.textJob) ).join('<br>');
+
+			this.div.innerHTML = s;
+			guiMessage( 'viewShow', this.divId );
 		}
 	}
 }
-
 
 function main() {
 	let population = 20;
@@ -170,7 +133,7 @@ function main() {
 	let clock = new Time.Clock(1.0);
 
 
-	let community = new Community( new CultureBase(Name.gnomeFirst,Name.gnomeLast) );
+	let community = new Community( new CultureBase(Name.humanFirst,Name.humanLast) );
 	community.clock = clock;
 
 	community.communityBuilder.build(population);
@@ -188,56 +151,27 @@ function main() {
 	community.dataFeed.city			= new DataFeed.City(community);
 
 	Gui.panelTier = {
-		panelProductivity: 0,
-		panelMorale: 1,
-		panelWellbeing: 1
+		viewProductivity: 0,
+		viewMorale: 1,
+		viewWellbeing: 1,
+		viewHousehold: 1
 	}
 
-	let viewProductivity = new ViewPanel( 'panelProductivity', root => {
-		root.addData(		community.dataFeed.productivity );
-		root.addLayout(		new PanelProductivity.Layout(root) );
-		root.addVisuals(	new PanelProductivity.Visuals(root) );
-		root.addElements(	new PanelProductivity.Elements(root) );
-	});
-
-	let viewMorale = new ViewPanel( 'panelMorale', root => {
-		root.addData(		community.dataFeed.morale );
-		root.addLayout(		new PanelMorale.Layout(root) );
-		root.addVisuals(	new PanelMorale.Visuals(root) );
-		root.addElements(	new PanelMorale.Elements(root) );
-		root.visible = false;
-	});
-
-	let viewWellbeing = new ViewPanel( 'panelWellbeing', root => {
-		root.addData(		community.dataFeed.wellbeing );
-		root.addLayout(		new PanelWellbeing.Layout(root) );
-		root.addVisuals(	new PanelWellbeing.Visuals(root) );
-		root.addElements(	new PanelWellbeing.Elements(root) );
-		root.visible = false;
-	});
-
-	let viewCity = new ViewPanel( 'panelCity', root => {
-		root.addData(		community.dataFeed.city );
-		root.addLayout(		new PanelCity.Layout(root) );
-		root.addVisuals(	new PanelCity.Visuals(root) );
-		root.addElements(	new PanelCity.Elements(root) );
-		root.visible = true;
-	});
-
-	let viewSituation = new ViewSituation( 'viewSituation' );
+	function viewMakerFn() {
+		this.add('productivity',new View.Productivity(	'viewProductivity', community.dataFeed.productivity ) );
+		this.add('morale',		new View.Morale(		'viewMorale', community.dataFeed.morale ) );
+		this.add('wellbeing',	new View.Wellbeing(		'viewWellbeing', community.dataFeed.wellbeing ) );
+		this.add('city', 		new View.City(			'viewCity', community.dataFeed.city ) );
+		this.add('situation',	new View.Situation(		'viewSituation' ) );
+		this.add('household',	new View.Household(		'viewHousehold' ) );
+	}
 
 	let observer = {
 		community: community
 	};
 
 	let gui = Gui.createManager( ()=>{} );
-	gui.create( function() {
-		this.add('productivity', viewProductivity );
-		this.add('morale', viewMorale );
-		this.add('wellbeing', viewWellbeing );
-		this.add('city', viewCity );
-		this.add('situation', viewSituation );
-	});
+	gui.create( viewMakerFn );
 	guiMessage( 'observer', observer );
 
 	window.addEventListener('resize', onResize );
@@ -258,6 +192,15 @@ function main() {
 				onFirstDay: (sitch) => {
 					sitch.community.aspect.food.silos.amount = 0;
 					guiMessage( 'situation', 'Famine! All stored food wiped out!' );
+					sitch.destroy();
+				}
+			}));
+			community.situationList.add( new Aspect.Situation({
+				community: community,
+				description: 'Cistern Sabotage!',
+				onFirstDay: (sitch) => {
+					sitch.community.aspect.water.cisterns.amount = 0;
+					guiMessage( 'situation', 'Cistern Sabotage! The cisterns were drained!' );
 					sitch.destroy();
 				}
 			}));
@@ -292,18 +235,20 @@ function onResize() {
 	<div id="guiMain">
 		<div class='col0'>
 			<div id="guiCity">
-				<div id="panelCity">
+				<div id="viewCity">
 				</div>
 			</div>
 		</div>
 		<div class='col1'>
 			<div id="guiCommunity">
-				<div id="panelProductivity">
+				<div id="viewProductivity">
 				</div>
 				<div id="guiSubPanels">
-					<div id="panelMorale" style="position:absolute;">
+					<div id="viewMorale" style="position:absolute;">
 					</div>
-					<div id="panelWellbeing" style="position:absolute;">
+					<div id="viewWellbeing" style="position:absolute;">
+					</div>
+					<div id="viewHousehold" style="position:absolute;">
 					</div>
 				</div>
 				<div id="viewSituation">

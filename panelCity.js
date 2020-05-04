@@ -72,10 +72,20 @@ PanelCity.Visuals = function (root) {
 	let visuals = {};
 
 	data.structureTraverse( structure => {
+		if( structure.isParasite ) {
+			return;
+		}
 		visuals[structure.id] = [ new Visual.Sprite('icons/'+structure.icon),	(v) => layout.structure(v,structure.circle,data.center,data.zoom) ];
+		if( structure.type.iconAlpha ) {
+			visuals[structure.id][0].alpha = structure.type.iconAlpha;
+		}
+
 	});
 
 	data.structureTraverse( structure => {
+		if( structure.isParasite ) {
+			return;
+		}
 		visuals[structure.id+'Radius'] = [ new Visual.Circle('white','rgba(0,0,0,0)'),	(v) => layout.structureRadius(v,structure.circle,data.center,data.zoom,!data.structureRadiusHide) ];
 	});
 
@@ -164,6 +174,9 @@ PanelCity.Elements = function(root) {
 	;
 
 	data.structureTraverse( structure => {
+		if( structure.isParasite ) {
+			return;
+		}
 		visual[structure.id].link('structureButton')
 			.on('click',()=>{})
 			.on('mouseover',()=>data.setInfo(structure.textSummary+' in '+structure.district.id))
@@ -173,9 +186,11 @@ PanelCity.Elements = function(root) {
 
 	data.person.traverse( person => {
 		visual[person.id].link('personButton')
-			.on('click',()=>{})
+			.on('click',()=>{
+				guiMessage( 'showHousehold', person.household );
+			})
 			.on('mouseover',() => {
-				data.setInfo(person.textRole);
+				data.setInfo(person.textInfo);
 				visual[person.id+'Bg'].isHovered=true;
 			})
 			.on('mouseout',() => {

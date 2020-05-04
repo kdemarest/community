@@ -665,6 +665,21 @@ Module.add('utilities2',function() {
 		return ok;
 	}
 
+	let Distance = {
+		get:		(dx,dy)				=> Math.sqrt(dx*dx+dy*dy),
+		within:		(dx,dy,dist)		=> (dx*dx)+(dy*dy) < dist*dist,
+		squared:	(dx,dy)				=> (dx*dx)+(dy*dy),
+		cast:		(cx,cy,rads,radius) => [cx+Math.cos(rads)*radius,cy+Math.sin(rads)*radius],
+		clockPick:	(cx,cy,radius)		=> {
+			console.assert( Number.isFinite(cx) && Number.isFinite(cy) && Number.isFinite(radius) );
+			let rads = Math.random()*2*Math.PI;
+			let x = cx+Math.cos(rads)*(radius+0.00001);
+			let y = cy+Math.sin(rads)*(radius+0.00001);
+			console.assert( Distance.get(x-cx,y-cy) >= radius );
+			return [x,y];
+		}
+	};
+
 	let Hash = Object;
 
 	class Finder {
@@ -755,9 +770,13 @@ Module.add('utilities2',function() {
 			});
 			return bestElement;
 		}
-		pick() {
-			let n = Math.randInt(0,this.list.length);
-			return this.list[n];
+		pick(fn) {
+			if( !fn ) {
+				fn = () => { return true; };
+			}
+			let legalList = this.list.filter( fn );
+			let n = Math.randInt(0,legalList.length);
+			return legalList[n];
 		}
 		get finder() {
 			return new Finder(this.list);
@@ -814,6 +833,7 @@ Module.add('utilities2',function() {
 	return {
 		Cookie: Cookie,
 		Hash: Hash,
+		Distance: Distance,
 		Finder: Finder,
 		ListManager: ListManager,
 		HashManager: HashManager,

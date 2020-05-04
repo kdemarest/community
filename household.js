@@ -1,13 +1,22 @@
 Module.add( 'household', ()=>{
 
-class Household extends Structure {
+let ResidenceType = {
+	isHouseholdType: true,
+	id: 'residence'
+}
+
+class Household extends StructureHolder {
 	constructor() {
 		super();
+		this.structure = new Structure();
 		this.isHousehold	= true;
 		this.memberList		= [];
 		this.uid = Date.makeUid();
 		this.icon = 'household.png';
+		this.type = ResidenceType;
 	}
+
+//-------------------------
 	get id() {
 		return this.head.nameLast+'-'+this.uid;
 	}
@@ -17,6 +26,15 @@ class Household extends Structure {
 	get structureSize() {
 		return Math.max(1,this.bedCapacity);
 	}
+//-------------------------
+	mergeIntoVenue(venue) {
+		this.icon = null;
+		this.isWithinVenue = true;
+		this.structure = venue.structure;
+		this.isParasite = true;	// I don't own my structure
+		console.assert( venue.household == null || venue.household === this );
+		venue.household = this;
+	}
 	get textSummary() {
 		return this.head.nameLast+' ('+this.bedCapacity+')';
 	}
@@ -24,7 +42,7 @@ class Household extends Structure {
 		console.assert(false);
 	}
 	get isOperational() {
-		return !this.needsRepair;
+		return !this.structure.needsRepair;
 	}
 	get bedCapacity() {
 		return this.memberList.length;
@@ -45,11 +63,18 @@ class Household extends Structure {
 		if( this.memberList.length == 1 ) {
 			return this.memberList[0];
 		}
-		let person = this.memberList.find( person => person.isAlive && person.isHusband && !person.isWidower );
+		let person = this.memberList.find( person => person.isHusband && !person.isBum && !person.isDomestic );
 		if( !person ) {
-			person = this.memberList.find( person => person.isAlive && person.isWife  && !person.isWidow );
+			person = this.memberList.find( person => person.isWife && !person.isBum && !person.isDomestic );
 		}
 		if( !person ) {
+			person = this.memberList.find( person => person.isWidower && !person.isBum && !person.isDomestic );
+		}
+		if( !person ) {
+			person = this.memberList.find( person => person.isWidow && !person.isBum && !person.isDomestic );
+		}
+		if( !person ) {
+			// Choose the oldest.
 			person = this.memberList[0];
 			this.memberList.forEach( p => person = p.age > person.age ? p : person );
 		}
@@ -62,7 +87,7 @@ class Household extends Structure {
 	get surname() {
 		return this.memberList.length ? this.memberList[0].surname : 'noNameYet';
 	}
-	get title() {
+	get textTitle() {
 		if( this.head.isSingle && this.memberCount > 1 ) {
 			return 'friends';
 		}
@@ -70,14 +95,14 @@ class Household extends Structure {
 	}
 	get text() {
 		let s = '';
-		s = this.title+' home: '+Array.joinAnd( this.memberList.map( member => member.textSummary ) );
+		s = this.textTitle+' home: '+Array.joinAnd( this.memberList.map( member => member.textSummary ) );
 		if( this.memberCount == 1 ) {
 			let head = this.head;
 			if( !head.spouse ) {
 				s += ' unmarried';
 			}
 			if( head.mother.isAlive || head.father.isAlive ) {
-				s += ' ('+head.childTitle+' of '+head.father.textSummary+' and '+head.mother.textSummary+')';
+				s += ' ('+head.titleChild+' of '+head.father.textSummary+' and '+head.mother.textSummary+')';
 			}
 		}
 		return s;

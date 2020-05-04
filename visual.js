@@ -359,6 +359,8 @@ Visual.Canvas = class {
 		this.canvas  = document.createElement("canvas");                 // Create a <li> node
 		this.canvas.style.position = 'absolute';
 		this.context = this.canvas.getContext('2d');
+		this.context.imageSmoothingEnabled = true;
+		this.context.imageSmoothingQuality = 'high';
 
 		this.overlay = document.createElement("div");
 		this.overlay.style.position = 'absolute';

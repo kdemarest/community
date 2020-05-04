@@ -1,11 +1,5 @@
 Module.add( 'habit', ()=>{
 
-let Distance = {
-	get: (dx,dy) => Math.sqrt(dx*dx+dy*dy),
-	within: (dx,dy,dist) => (dx*dx)+(dy*dy) < dist*dist,
-	squared: (dx,dy) => (dx*dx)+(dy*dy)
-};
-
 let Habit = {};
 
 Habit.Glyphable = class {
@@ -24,19 +18,31 @@ Habit.GlyphableHash = class extends HashManager {
 	getByGlyph(glyph) {
 		return this.find( a => a.glyph == glyph );
 	}
+	getById(id) {
+		console.assert( id && this.hash[id] );
+		return this.hash[id];
+	}
 };
 
 
 Habit.ActivityType = class extends Habit.Glyphable {
-}
-
-Habit.ActivityTypeHash = new class extends Habit.GlyphableHash {
-	constructor() {
-		super();
-		this.add( 'sleep', new Habit.ActivityType('.') );
-		this.add( 'rest',  new Habit.ActivityType('r') );
-		this.add( 'eat',   new Habit.ActivityType('E') );
-		this.add( 'work',  new Habit.ActivityType('W') );
+	constructor(glyph,locationHash) {
+		super(glyph);
+		this.locationHash = locationHash;
+		Object.each( this.locationHash, (value,locationId) => {
+			console.assert( this.isValidLocation(locationId) );
+		});
+	}
+	isValidLocation(locationId) {
+		return Habit.LocationTypeHash.get(locationId);
+	}
+	pickLocationType() {
+		let picker = new Pick.Table().scanKeys( this.locationHash );
+		let locationId = picker.pick();
+		console.assert( locationId );
+		let locationType = Habit.LocationTypeHash.get( locationId );
+		console.assert( locationType );
+		return locationType;
 	}
 }
 
@@ -46,15 +52,23 @@ Habit.LocationType = class extends Habit.Glyphable {
 Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 	constructor() {
 		super();
-		this.add( 'home',	new Habit.LocationType( 'h', {
+		this.add( 'home',	new Habit.LocationType('h', {
 			getLocation: (habit) => {
 				return habit.household.circle;
 			}
 		}));
-		this.add( 'tavern',	new Habit.LocationType('t', {
+		this.add( 'eatery',	new Habit.LocationType('t', {
 			getLocation: (habit) => {
 				let tavern = habit.venueNearestToHome('tavern');
 				return (tavern || habit.household).circle;
+			}
+		}));
+		this.add( 'shop',	new Habit.LocationType('s', {
+			getLocation: (habit) => {
+				let picker = habit.venuePicker( venue => 
+					venue.type.isShop ? habit.distanceFrom(venue) : 0
+				);
+				return picker.pick().circle;
 			}
 		}));
 		this.add( 'work',   new Habit.LocationType('w', {
@@ -62,22 +76,54 @@ Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 				return habit.venue ? habit.venue.circle : habit.household.circle;
 			}
 		}));
+		this.add( 'visit',   new Habit.LocationType('w', {
+			getLocation: (habit) => {
+				return habit.venue ? habit.venue.circle : habit.household.circle;
+			}
+		}));
+		this.add( 'entertainment',   new Habit.LocationType('w', {
+			getLocation: (habit) => {
+				let picker = habit.venuePicker( venue =>
+					venue.produces.id=='entertainment' ? habit.distanceFrom(venue) : 0
+				);
+				return picker.pick().circle;
+			}
+		}));
 	}
-}
+}();
+
+Habit.ActivityTypeHash = new class extends Habit.GlyphableHash {
+	constructor() {
+		super();
+		this.add( 'sleep',		new Habit.ActivityType( '.', { home:1 }) );
+		this.add( 'rest',		new Habit.ActivityType( 'r', { home:1, entertainment:1 }) );
+		this.add( 'morning',	new Habit.ActivityType( 'm', { home:1 }) );
+		this.add( 'shop',		new Habit.ActivityType( 's', { shop:1 }) );
+		this.add( 'eat',		new Habit.ActivityType( 'E', { home:1, eatery:1 }) );
+		this.add( 'work',		new Habit.ActivityType( 'w', { work:1 }) );
+		this.add( 'visit',		new Habit.ActivityType( 'v', { visit:1 }) );
+	}
+}();
 
 Habit.Manager = class {
 	constructor(person) {
 		this.person = person;
 		//			  	  [0123456789te0123456789te]
-		this.activity	= '......rEwwwwEwwwwwErrrr.';
-		this.location	= 'hhhhhhhtwwwwtwwwwhhhhhhh';
+		this.activity	= person.jobType.activity || '......mEwwwwEswwwvEssrr.';
 		this.places = {};
+		this.destinationMemory = { hour: null, location: null };
 	}
 	get venue() {
 		return this.person.venue || this.person.household;
 	}
 	get household() {
 		return this.person.household;
+	}
+	distanceFrom(venue) {
+		return Distance.get(venue.circle.x-this.person.circle.x,venue.circle.y-this.person.circle.y);
+	}
+	venuePicker(fn) {
+		return new Pick.Table().scanArray( this.person.community.venueList.list, fn );
 	}
 	venueNearestTo(origin,criteriaFn) {
 		let closestDist2 = 9999*9999;
@@ -142,9 +188,21 @@ Habit.Manager = class {
 	}
 
 	locationAt(hour) {
-		let locationGlyph = this.location.substring(hour,hour+1);
-		let locationType = Habit.LocationTypeHash.getByGlyph(locationGlyph);
-		return locationType.getLocation(this);
+		let temp;
+		if( this.destinationMemory.hour !== hour ) {
+			let activityGlyph	= this.activity.substring(hour,hour+1);
+			temp = activityGlyph;
+			console.assert( activityGlyph && activityGlyph!==undefined);
+			let activityType	= Habit.ActivityTypeHash.getByGlyph(activityGlyph); 
+			console.assert( activityType );
+			let locationType	= activityType.pickLocationType();
+			console.assert( locationType );
+
+			this.destinationMemory.hour = hour;
+			this.destinationMemory.location = locationType.getLocation(this);
+		}
+
+		return this.destinationMemory.location;
 	}
 
 	get destination() {
@@ -155,12 +213,15 @@ Habit.Manager = class {
 
 	get atDestination() {
 		let d = this.destination;
-		return Distance.within( d.x-this.x, d.y-this.y, d.radius );
+		return Distance.within( d.x-this.x, d.y-this.y, (d.radius+this.radius) * 0.4 );
 	}
 
 	tick(dt) {
 		if( !this.everRun ) {
-			this.moveToPos(this.destination);
+			let d = this.destination;
+			let pos = {x:0,y:0};
+			[pos.x,pos.y] = Distance.clockPick(d.x,d.y,d.radius);
+			this.moveToPos(pos);
 			this.everRun = true;
 			return;
 		}

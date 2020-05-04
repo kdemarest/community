@@ -7,13 +7,13 @@ PanelMorale.Layout = (function(root) {
 	let degAtOne  = Math.PI*0.50;
 	let deg180    = Math.PI*2*0.50;
 	let arcInner  = 0.12;
-	let arcOuter  = 0.22;
-	let arcFace   = (arcInner+arcOuter) * 0.50;
-	let arcIcons  = 0.30;
+	let arcOuter  = 0.28;
+	let arcFace   = arcInner * 0.50; //(arcInner+arcOuter) * 0.50;
+	let arcIcons  = arcOuter + 0.08;
 	let floorTip  = 0.03;
 
 	let xCenter = ()=>root.width*0.50;
-	let yCenter = ()=>root.height*0.80;
+	let yCenter = ()=>root.height*0.92;
 	let yFloor  = ()=>yCenter()+root.height*0.04;
 	let pctToRadians = (pct) => deg180+(degAtOne*pct);
 	let xHalf   = ()=>root.width * (arcOuter+floorTip);
@@ -41,7 +41,8 @@ PanelMorale.Layout = (function(root) {
 
 	this.iconFace = (v,pct) => {
 		[v.x,v.y] = arcPt( pct, arcFace );
-		v.scaleToWidth(root.width*0.07);
+		v.scaleToWidth(root.width*0.12);
+		v.image = pct < 1.0 ? 'icons/moraleLow.png' : 'icons/morale.png';
 	}
 
 	this.arc = (v,startPct,endPct)=> {
@@ -83,7 +84,7 @@ PanelMorale.Visuals = function(root) {
 		title:			[ new Visual.Text('white','Morale'),	(v) => layout.title(v) ],
 		info:			[ new Visual.Text('white',''),			(v) => { layout.info(v); v.setText(data.info); } ],
 
-		children:		[ new Visual.Sprite('icons/children.png'),			(v) => layout.iconMid(v,0.0,data.rot(0)) ],
+		family:			[ new Visual.Sprite('icons/children.png'),		(v) => layout.iconMid(v,0.0,data.rot(0)) ],
 		security: 		[ new Visual.Sprite('icons/security.png'),		(v) => layout.iconMid(v,data.rot(0),data.rot(1)) ],
 		entertainment:	[ new Visual.Sprite('icons/entertainment.png'),	(v) => layout.iconMid(v,data.rot(1),data.rot(2)) ],
 		leadership:		[ new Visual.Sprite('icons/leadership.png'),	(v) => layout.iconMid(v,data.rot(2),data.rot(3)) ],
@@ -93,8 +94,9 @@ PanelMorale.Visuals = function(root) {
 		arc2:			[ new Visual.Arc(),	(v) => layout.arc(v,data.rot(1),data.rot(2)) ],
 		arc3:			[ new Visual.Arc(),	(v) => layout.arc(v,data.rot(2),data.rot(3)) ],
 
-		face0:			[ new Visual.Sprite('icons/moraleLow.png'),	(v) => layout.iconFace(v,1.0-0.70) ],
-		face2:			[ new Visual.Sprite('icons/morale.png'),	(v) => layout.iconFace(v,1.0+0.70) ],
+		face:			[ new Visual.Sprite('icons/moraleLow.png'),	(v) => layout.iconFace(v,data.rot(3)) ],
+//		face0:			[ new Visual.Sprite('icons/moraleLow.png'),	(v) => layout.iconFace(v,1.0-0.70) ],
+//		face2:			[ new Visual.Sprite('icons/morale.png'),	(v) => layout.iconFace(v,1.0+0.70) ],
 
 		L0:				[ new Visual.Line('white',2),	(v) => layout.lineBase(v) ],
 		L1:				[ new Visual.Line('white',1),	(v) => layout.lineVert(v) ],
@@ -109,23 +111,23 @@ PanelMorale.Elements = (function(root) {
 	let data	= root.data;
 
 	visual.leadership.link('iconButton')
-		.on('click',()=>data.leadership -= 0.1)
+		.on('click',()=>{})
 		.on('mouseover',()=>data.analyze('leadership'))
 		.on('mouseout',()=>data.info='')
 	;
 	visual.security.link('iconButton')
-		.on('click',()=>{ data.security -= 0.1; })
+		.on('click',()=>{})
 		.on('mouseover',()=>data.analyze('security'))
 		.on('mouseout',()=>data.info='')
 	;
 	visual.entertainment.link('iconButton')
-		.on('click',()=>{ data.entertainment -= 0.1; })
+		.on('click',()=>{})
 		.on('mouseover',()=>data.analyze('entertainment'))
 		.on('mouseout',()=>data.info='')
 	;
-	visual.children.link('iconButton')
-		.on('click',()=>{ data.children -= 0.1; })
-		.on('mouseover',()=>data.analyze('children'))
+	visual.family.link('iconButton')
+		.on('click',()=>{})
+		.on('mouseover',()=>data.analyze('family'))
 		.on('mouseout',()=>data.info='')
 	;
 });

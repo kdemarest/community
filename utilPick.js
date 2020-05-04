@@ -173,9 +173,9 @@ class Stock {
 	inc(stocker) {
 		this.accumulator += this.chance;
 		while( this.accumulator >= 1.0 ) {
-			this.onProduce(this.obj);
-			this.accumulator -= 1.0;
-			stocker.remaining--;
+			let numProduced = this.onProduce(this.obj);
+			this.accumulator -= numProduced;
+			stocker.remaining -= numProduced;
 		}
 	}
 }
@@ -184,6 +184,12 @@ Pick.Stocker = class extends HashManager {
 	scanHash(hash,frequencyFn,onProduceFn) {
 		Object.each( hash, (value,key) => {
 			this.hash[key] = new Stock( value, frequencyFn(value), onProduceFn );
+		});
+		return this;
+	}
+	scanArray(list,frequencyFn,onProduceFn) {
+		list.forEach( (value,index) => {
+			this.hash[index] = new Stock( value, frequencyFn(value), onProduceFn );
 		});
 		return this;
 	}

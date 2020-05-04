@@ -134,7 +134,6 @@ Aspect.Base = class {
 		this.isAspect  = true;
 		this.community = community;
 		this._bucketList = [];
-		this.noConsume = amount => 0;
 	}
 	init() {
 	}
@@ -220,7 +219,8 @@ Aspect.Food = class extends Aspect.Base {
 		this.silos		= new Bucket.Storage(14*pop,0.5);
 		this.farm		= new Bucket.PendingPeriodic( 30, b=>this.store(b.amount,'The harvest') );
 		this.pasture	= new Bucket.PendingPeriodic(  5, b=>this.store(b.amount,'Pastured animals') );
-		this.hunting	= new Bucket.PendingChance( 0.30, 0.0, b=>this.store(b.amount,'Hunters') );
+		this.hunting	= new Bucket.PendingChance( 0.10, 0.0, b=>this.store(b.amount,'Hunters') );
+		this.fishing	= new Bucket.PendingChance( 0.70, 0.0, b=>this.store(b.amount,'Fishers') );
 		this.foodCaravan= new Bucket.PendingPeriodic( caravanPeriod, b=>this.store(b.amount,'A caravan') );
 		this.garden		= new Bucket.Daily();
 		this.grocery	= new Bucket.Daily();
@@ -230,7 +230,7 @@ Aspect.Food = class extends Aspect.Base {
 	}
 	store(food,sourceDescription) {
 		let amountActuallyKept = this.silos.onResourceProduced( food );
-		guiMessage( 'situation', sourceDescription+' add '+this.toDays(food)+' food.' );
+		guiMessage( 'situation', sourceDescription+' added '+this.toDays(food)+' food.' );
 	}
 	onResourceProduced(amount,person) {
 		let bucketId = person.venue.type.id;
@@ -321,7 +321,7 @@ Aspect.Leadership = class extends Aspect.Base {
 	}
 }
 
-Aspect.Children = class extends Aspect.Base {
+Aspect.Family = class extends Aspect.Base {
 }
 
 class Bonus {

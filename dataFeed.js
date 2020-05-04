@@ -62,9 +62,9 @@ DataFeed.Wellbeing = class extends DataFeed.Base {
 		});
 
 		this.$worst = (() => {
-			let w = { wbId: '', value: 1.0, rowIndex: null, icon: null };
+			let w = { wbId: '', value: 0.0, rowIndex: null, icon: null };
 			this.traverse( wb => {
-				if( wb.value() < w.value ) {
+				if( wb.value() > w.value ) {
 					w.wbId		= wb.id;
 					w.rowIndex	= wb.rowIndex;
 					w.value		= wb.value();
@@ -108,7 +108,7 @@ DataFeed.Morale = class extends DataFeed.Base {
 	constructor(community) {
 		super();
 		this.community = community;
-		this.list = ['children','security','entertainment','leadership'];
+		this.list = ['family','security','entertainment','leadership'];
 		this.info = '';
 		this.update();
 	}
@@ -156,7 +156,7 @@ DataFeed.Productivity = class extends DataFeed.Base {
 
 		let skill		= this.community.getWeightedSkill();
 		let morale		= this.dataMorale.value - 1;
-		let wellbeing	= this.dataWellbeing.value;
+		let wellbeing	= -this.dataWellbeing.value;
 		let gear		= this.community.aspect.gear.percentOperational - 1.0;
 		let venue		= this.community.aspect.venue.percentOperational - 1.0;
 

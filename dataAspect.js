@@ -2,6 +2,33 @@ Module.add('dataAspect',function() {
 
 let AspectTypeHash = {
 	water: {
+		postGenerate: true,
+		producedByVenue: true,
+		venueInitHash: {
+			well: {
+				icon: 'well.png',
+				chance: 0.20,
+				workforceMax: 40,
+				district: 'residential',
+				tilesMax: 3,
+			},
+			river: {
+				icon: 'river.png',
+				iconAlpha: 0.50,
+				chance: 0.40,
+				workforceMax: 100,
+				district: 'outlier',
+				tilesMax: 10,
+			},
+			lake: {
+				icon: 'lake.png',
+				iconAlpha: 0.50,
+				chance: 0.40,
+				workforceMax: 400,
+				district: 'outlier',
+				tilesMax: 30,
+			}
+		}
 	},
 	sleep: {
 	},
@@ -15,6 +42,7 @@ let AspectTypeHash = {
 		venueInitHash: {
 			farm: {
 				icon: 'field.png',
+				iconAlpha: 0.50,
 				whatProduced: 'crops',
 				workforceRatio: 0.50,
 				workforceMax: 50,
@@ -63,6 +91,20 @@ let AspectTypeHash = {
 					},
 				}
 			},
+			fishing: {
+				icon: 'fishing.png',
+				whatProduced: 'fish',
+				district: 'outlier',
+				tilesPerWorker: 1,
+				tileMax: 1,
+				attachTo: { river: 1, lake: 1 },
+				jobInitHash: {
+					fisher: {
+						icon: { img: 'person.png', holding: 'fisher.png' },
+						wealth: 'low',
+					},
+				}
+			},
 			foodCaravan: {
 				icon: 'muleFood.png',
 				whatProduced: 'preserves',
@@ -83,6 +125,7 @@ let AspectTypeHash = {
 				workforceMax: 5,
 				district: 'residential',
 				tilesPerWorker: 2,
+				isShop: true,
 				jobInitHash: {
 					botanist: {
 						icon: { img: 'person.png', iconHolding: 'garden.png' },
@@ -100,6 +143,7 @@ let AspectTypeHash = {
 				neverPickFirst: true,
 				workforceMax: 10,
 				district: 'market',
+				isShop: true,
 				jobInitHash: {
 					grocer: {
 						icon: { img: 'person.png', iconHolding: 'grocery.png' },
@@ -146,7 +190,8 @@ let AspectTypeHash = {
 					},
 					guard: {
 						useIfSingular: true,  icon: { img: 'person.png', holding: 'guard.png' },
-						wealth: 'low'
+						wealth: 'low',
+						houseAtWorkplaceWhenSingle: true,
 					},
 					medic: { 
 						chance: 0.10,	// About 10% of a battalion is medics.
@@ -226,7 +271,8 @@ let AspectTypeHash = {
 				jobInitHash: {
 					ruler: {
 						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'ruler.png' },
-						wealth: 'high'
+						wealth: 'high',
+						houseAtWorkplace: true
 					},
 					planner: {
 						onePerVenue: true, icon: { img: 'person.png', holding: 'planner.png' },
@@ -250,7 +296,8 @@ let AspectTypeHash = {
 				jobInitHash: {
 					noble: {
 						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'noble.png' },
-						wealth: 'medium'
+						wealth: 'medium',
+						houseAtWorkplace: true
 					},
 					servant: {
 						icon: { img: 'person.png', holding: 'servant.png' },
@@ -262,15 +309,16 @@ let AspectTypeHash = {
 	},
 	gear: {
 		icon: 'goods.png',
-		percentOfPopulation: 0.20,
+		percentOfPopulation: 0.18,
 		venueInitHash: {
 			caravan: {
 				icon: 'muleLaden.png',
 				isTradeRoute: true,
-				chance: 5,
+				chance: 2,
 				workforceRatio: 0.20,	// double the usual
 				workforceMax: 6,
 				district: 'market',
+				isShop: true,
 				jobInitHash: {
 					trader: {
 						icon: { img: 'person.png', holding: 'trader.png' },
@@ -283,10 +331,12 @@ let AspectTypeHash = {
 				workforceRatio: 0.001,
 				workforceMax: 2,
 				district: 'any',
+				isShop: true,
 				jobInitHash: {
 					peddler: {
 						icon: { img: 'person.png', holding: 'trader.png' },
-						wealth: 'low'
+						wealth: 'low',
+						houseAtWorkplace: true
 					}
 				}
 			},
@@ -294,6 +344,7 @@ let AspectTypeHash = {
 				icon: 'bloomery.png',
 				workforceMax: 12,
 				district: 'industrial',
+				isShop: true,
 				jobInitHash: {
 					smelterForeman: {
 						onePerVenue: true, icon: { img: 'person.png', holding: 'bloomery.png' },
@@ -309,6 +360,7 @@ let AspectTypeHash = {
 				icon: 'brewer.png',
 				workforceMax: 12,
 				district: 'any',
+				isShop: true,
 				jobInitHash: {
 					brewer: {
 						icon: { img: 'person.png', holding: 'brewer.png' },
@@ -320,6 +372,7 @@ let AspectTypeHash = {
 				icon: 'clothier.png',
 				workforceMax: 4,
 				district: 'market',
+				isShop: true,
 				jobInitHash: {
 					clothier: {
 						icon: { img: 'person.png', holding: 'clothier.png' },
@@ -343,6 +396,7 @@ let AspectTypeHash = {
 				icon: 'armor.png',
 				workforceMax: 8,
 				district: 'market',
+				isShop: true,
 				jobInitHash: {
 					armorer: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'armor.png' },
@@ -358,6 +412,7 @@ let AspectTypeHash = {
 				icon: 'bow.png',
 				workforceMax: 6,
 				district: 'market',
+				isShop: true,
 				jobInitHash: {
 					bowyer: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'bow.png' },
@@ -373,6 +428,7 @@ let AspectTypeHash = {
 				icon: 'jeweler.png',
 				workforceMax: 4,
 				district: 'wealthy',
+				isShop: true,
 				jobInitHash: {
 					jeweler: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'jeweler.png' },
@@ -388,6 +444,7 @@ let AspectTypeHash = {
 				icon: 'glass.png',
 				workforceMax: 8,
 				district: 'industrial',
+				isShop: true,
 				jobInitHash: {
 					glassBlower: {
 						icon: { img: 'person.png', holding: 'glass.png' },
@@ -414,6 +471,7 @@ let AspectTypeHash = {
 				icon: 'smith.png',
 				workforceMax: 6,
 				district: 'industrial',
+				isShop: true,
 				jobInitHash: {
 					blacksmith: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'smith.png' },
@@ -436,6 +494,7 @@ let AspectTypeHash = {
 				workforceMax: 20,
 				district: 'residential',
 				tilesPerWorker: 5,
+				isShop: true,
 				jobInitHash: {
 					librarian: {
 						icon: { img: 'person.png', holding: 'library.png' },
@@ -464,10 +523,12 @@ let AspectTypeHash = {
 				workforceMax: 12,
 				district: 'wealthy',
 				tilesPerWorker: 5,	// gives 0.25 tiles per person served.
+				isShop: true,
 				jobInitHash: {
 					priest: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'priest.png' },
-						wealth: 'medium'
+						wealth: 'medium',
+						houseAtWorkplace: true
 					},
 					acolyte: {
 						icon: { img: 'person.png', holding: 'priest.png' },
@@ -479,6 +540,7 @@ let AspectTypeHash = {
 				icon: 'scribe.png',
 				workforceMax: 8,
 				district: 'wealthy',
+				isShop: true,
 				jobInitHash: {
 					scribe: {
 						icon: { img: 'person.png', holding: 'scribe.png' },
@@ -493,10 +555,11 @@ let AspectTypeHash = {
 		percentOfPopulation: 0.02,	// A doc can serve 50 people, under normal conditions.
 		venueInitHash: {
 			doctor: {
+				chance: 80,
 				icon: 'doctor.png',
 				workforceMax: 2,
-				chance: 80,
 				district: 'any',
+				isShop: true,
 				jobInitHash: {
 					doctor: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' },
@@ -509,6 +572,7 @@ let AspectTypeHash = {
 				}
 			},
 			hospital: {
+				chance: 20,
 				icon: 'doctor.png',
 				workforceMax: 20,
 				district: 'wealthy',
@@ -519,17 +583,24 @@ let AspectTypeHash = {
 			}
 		}
 	},
-	children: {
+	family: {
 		isHidden: true,
-		percentOfPopulation: 0.18,
+		percentOfPopulation: 0.20,
 		venueInitHash: {
 			family: {
 				icon: 'children.png',
 				isFakeVenue: true,
 				jobInitHash: {
 					child: {
+						chance: 70,
 						icon: { img: 'children.png' },
 						isChild: true,
+						wealth: null
+					},
+					domestic: {
+						chance: 30,
+						icon: { img: 'person.png' },
+						isDomestic: true,
 						wealth: null
 					}
 				}
@@ -544,12 +615,12 @@ let AspectTypeHash = {
 		venueInitHash: {
 			around: {
 				icon: 'beggar.png',
-				chance: 0.10,
 				isFakeVenue: true,
 				jobInitHash: {
 					bum: {
 						icon: { img: 'person.png', holding: 'beggar.png' },
-						wealth: 'low'
+						wealth: 'low',
+						isBum: true,
 					}
 				}
 			}
@@ -607,7 +678,7 @@ Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
 	//console.log(aspectTypeId,aspectType.workforceRatio);
 
 	totalPercentOfPopulation += (aspectType.percentOfPopulation||0);
-	aspectType.workerImpact = !aspectType.percentOfPopulation ? 0 : 1 / aspectType.percentOfPopulation;
+	aspectType.workerImpact = aspectType.workerImpact || !aspectType.percentOfPopulation ? 0 : 1 / aspectType.percentOfPopulation;
 
 	// Initialize global hashes, and also my local hashes.
 	Object.each( aspectType.venueInitHash, (venueInit,venueTypeId) => {
@@ -629,7 +700,7 @@ Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
 				id:					venueTypeId,
 				isVenueType:		true,
 				//name:				venueTypeId,
-				jobTypeHash:		Hash.map( venueInit.jobInitHash, (X,jobTypeId) => JobTypeHash[jobTypeId] ),
+				jobTypeHash:		!venueInit.jobInitHash ? null : Hash.map( venueInit.jobInitHash, (X,jobTypeId) => JobTypeHash[jobTypeId] ),
 				produces:			aspectType
 			},
 			venueInit
@@ -643,8 +714,8 @@ Object.each( AspectTypeHash, (aspectType,aspectTypeId) => {
 				{
 					id:				jobTypeId,
 					isJobType:		true,
-					name:			jobTypeId,
-					venueType:	VenueTypeHash[venueTypeId],
+					name:			String.uncamel(jobTypeId),
+					venueType:		VenueTypeHash[venueTypeId],
 					produces:		produces,
 					workerImpact:	!produces.percentOfPopulation ? 0 : 1 / produces.percentOfPopulation
 				},

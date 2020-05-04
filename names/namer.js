@@ -92,7 +92,7 @@ Maker.gnome = class extends Maker {
 	get nameFirstList() {
 		this._nameFirstList = this._nameFirstList || new NameProcessor(this.repo.nameFirstList)
 			.filter( name => name.hasCountry('KR') )
-			.convert( [/y/g,'th'], [/Y/g,'Th'], [/o/g,'y'], [/ng/g,'nk'], [/u/g,'a'], [/w/g,'o'], [/ae/g,'ow'], [/i/g, 'ar'] )
+			.convert( [/y/g,'th'], [/Y/g,'Th'], [/o/g,'y'], [/ng/g,'nk'], [/u/g,'a'], [/w/g,'o'], [/ae/g,'ow'], [/i/g, 'ar'], [/ /g,''] )
 			.unique()
 			.sort()
 			.nameList
@@ -145,9 +145,9 @@ function main() {
 	//nameParser.stats();
 
 	let gnome = new Maker.gnome(repo);
-	//console.log( gnome.firstNamesJsonByGender );
-	console.log( gnome.nameLastList.length );
-	console.log( gnome.lastNamesJson );
+	console.log( gnome.firstNamesJsonByGender );
+	//console.log( gnome.nameLastList.length );
+	//console.log( gnome.lastNamesJson );
 
 	//let human = new Maker.human(repo);
 	//console.log( human.firstNamesJsonByGender );

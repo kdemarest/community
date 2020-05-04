@@ -8,9 +8,6 @@ class Structure {
 		this.district = null;
 		this.circle = null;
 	}
-	get condition() {
-		return this.integrity;
-	}
 	repair( peopleDays ) {
 		this.integrity = Math.clamp( this.integrity + peopleDays/this.peopleDaysToBuild, 0.0, 1.0 );
 	}
@@ -19,8 +16,30 @@ class Structure {
 	}
 }
 
-class Venue extends Structure {
-	constructor( type, workerCapacity ) {
+class StructureHolder {
+	constructor() {
+		this.structure	= new Structure();
+	}
+	set circle(value) {
+		console.assert( !this.isParasite );
+		this.structure.circle = value;
+	}
+	get circle() {
+		return this.structure.circle;
+	}
+	set tileRadius(value) {
+		this.structure.tileRadius = value;
+	}
+	get tileRadius() {
+		return this.structure.tileRadius;
+	}
+	get needsRepair() {
+		return this.structure.needsRepair;
+	}
+}
+
+class Venue extends StructureHolder {
+	constructor( type, workerCapacity, directProduction ) {
 		super();
 		console.assert( type && VenueTypeHash[type.id] && workerCapacity );
 		Object.assign( this, type );
@@ -28,18 +47,22 @@ class Venue extends Structure {
 		this.type		= type;
 		this.id			= type.id+'.'+Date.makeUid();
 		this.workerCapacity	= workerCapacity;
+		this.directProduction = directProduction;
 		this.workerHash	= new HashManager();
-		this.district  = null;
+		this.district	= null;
+		this.household	= null;
 	}
+//-------------------------
 	get preferredDistrictId() {
 		return this.type.district;
 	}
 	get structureSize() {
-		return this.workerCapacity*(this.type.tilesPerWorker||1)
+		return Math.min( this.type.tilesMax || 9999, this.workerCapacity*(this.type.tilesPerWorker||1) );
 	}
 	get districtId() {
 		console.assert(false);
 	}
+//-------------------------
 
 	get name() {
 		let sizeName = ['small','medium','large','huge'][Math.min(3,Math.floor(Math.sqrt(1+this.workerCapacity))-1)];
@@ -52,7 +75,7 @@ class Venue extends Structure {
 		return this.name+' ('+this.workerCapacity+') makes '+this.type.produces.id;
 	}
 	get isOperational() {
-		return !this.needsRepair;
+		return !this.structure.needsRepair;
 	}
 	get workerNameArray() {
 		let nameList = [];
@@ -74,6 +97,15 @@ class Venue extends Structure {
 	get adequatelyStaffed() {
 		return this.percentWorked >= 0.80;
 	}
+	produce(gatherFn) {
+		if( !this.directProduction ) {
+			return;
+		}
+
+		console.assert(gatherFn);
+		gatherFn( this.type.produces.id, this.directProduction );
+	}
+
 }
 
 class VenueList extends ListManager {
@@ -93,7 +125,8 @@ class VenueList extends ListManager {
 return {
 	Venue: Venue,
 	VenueList: VenueList,
-	Structure: Structure
+	Structure: Structure,
+	StructureHolder: StructureHolder
 }
 
 });

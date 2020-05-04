@@ -6,11 +6,11 @@ class Community {
 		this.isBuilt = false;
 		this.id = Date.makeUid();
 		this.culture = culture;
-		this.personList = new PersonList().setValidator( p=>p.isAlive );
-		this.ancestorList = new PersonList().setValidator( p=>p.isDead );
-		this.venueList = new VenueList().setValidator( v=>v.type.district );
-		this.householdList = new HouseholdList;
-		this.situationList = new ListManager;
+		this.personList		= new PersonList().setValidator( p=>p.isAlive );
+		this.ancestorList	= new PersonList().setValidator( p=>p.isDead );
+		this.venueList		= new VenueList().setValidator( v=>v.type.district );
+		this.householdList	= new HouseholdList;
+		this.situationList	= new ListManager;
 
 		this.moraleDirty = true;
 		this.dayTime = new Time.GameTime();
@@ -29,7 +29,6 @@ class Community {
 			aspect.initBuckets();
 		});
 	}
-
 
 	get structureList() {
 		return new ListManager( this.venueList.list.concat( this.householdList.list ) );
@@ -53,7 +52,7 @@ class Community {
 		// make somebody the surrogate.
 		if( !this.surrogateTable ) {
 			this.surrogateTable = {
-				children: {
+				family: {
 					pickFn: ()=>this.personList.best( person => Math.abs(person.age-6) ),
 					jobTypeId: 'child'
 				},
@@ -81,9 +80,14 @@ class Community {
 	}
 	moraleForAspect(aspectId) {
 		if( !this.moraleContribution ) {
-			let total = this.aspect.leadership.workerImpact + this.aspect.entertainment.workerImpact + this.aspect.security.workerImpact + this.aspect.children.workerImpact;
+			let total =
+				this.aspect.leadership.workerImpact +
+				this.aspect.entertainment.workerImpact +
+				this.aspect.security.workerImpact +
+				this.aspect.family.workerImpact
+			;
 			this.moraleContribution = {
-				children:		this.aspect.children.workerImpact/total,
+				family:			this.aspect.family.workerImpact/total,
 				security:		this.aspect.security.workerImpact/total,
 				entertainment:	this.aspect.entertainment.workerImpact/total,
 				leadership:		this.aspect.leadership.workerImpact/total,
@@ -105,7 +109,7 @@ class Community {
 		}
 		// Morale is an instantaneous measurement
 		let moraleAll =
-			this.moraleForAspect('children') +
+			this.moraleForAspect('family') +
 			this.moraleForAspect('security') +
 			this.moraleForAspect('entertainment') +
 			this.moraleForAspect('leadership');
@@ -183,16 +187,22 @@ class Community {
 			// Everybody just does what they do, for now.
 		});
 
-		// Produce resources
+		// Produce resources due to people
 		this.personList.traverse( person => {
-			person.produce( (aspectId,amount) => {
+			person.produce( (aspectId, amount) => {
 				let aspect = this.aspectHash.get(aspectId);
 				aspect.onResourceProduced( amount, person );
 			});
 		});
 
-		// Water from wells
-		this.aspect.water.onResourceProduced( this.population );
+		// Produce resources, rarely, due to certain venues (water)
+		this.venueList.traverse( venue => {
+			venue.produce( (aspectId, amount) => {
+				let aspect = this.aspectHash.get(aspectId);
+				aspect.onResourceProduced( amount, venue );
+			});
+		});
+
 
 		// Home repair
 		this.structureRepair( this.householdList, 20 );

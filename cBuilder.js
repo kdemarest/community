@@ -13,8 +13,8 @@ class CommunityBuilder {
 		return this.community.householdList;
 	}
 
-	makeHusbandOf(person) {
-		let venue   = this.community.venueList.pick();
+	makeDeadHusbandOf(person) {
+		let venue   = this.community.venueList.pick( venue => !!venue.jobTypeHash );
 		let jobType = new Finder( venue.jobTypeHash ).pick();
 		let husband = new Person( person.culture, this.community, jobType, venue, {
 			gender: 'M',
@@ -25,8 +25,8 @@ class CommunityBuilder {
 		return husband;
 	}
 
-	makeMotherOf(person) {
-		let venue   = this.community.venueList.pick();
+	makeDeadMotherOf(person) {
+		let venue   = this.community.venueList.pick( venue => !!venue.jobTypeHash );
 		let jobType = new Finder( venue.jobTypeHash ).pick();
 		let mother = new Person( person.culture, this.community, jobType, venue, {
 			gender: 'F',
@@ -37,14 +37,14 @@ class CommunityBuilder {
 
 		// And since every living person needs to have a mother and father...
 		let husband = this.combinedList.find( husband => husband.canBeHusbandOf(mother) );
-		husband = husband || this.makeHusbandOf(mother);
+		husband = husband || this.makeDeadHusbandOf(mother);
 		mother.spouse = husband;
 		console.assert( husband.spouse );
 
 		return mother;
 	}
 
-	createRelatedness(combinedLIst) {
+	createRelatedness() {
 		let hack = 0;
 
 		this.combinedList.shuffle();
@@ -52,7 +52,7 @@ class CommunityBuilder {
 		// Find or make my mother, which auto-makes mother-based families
 		this.combinedList.traverse( person => {
 			let mother = this.combinedList.find( mom => mom.canBeMotherOf(person) );
-			mother = mother || this.makeMotherOf( person );
+			mother = mother || this.makeDeadMotherOf( person );
 			person.mother = mother;
 		});
 
@@ -61,7 +61,7 @@ class CommunityBuilder {
 			let needsHusband = !person.spouse && person.isFemale && (person.childCount > 0 || person.culture.chanceMarried(person));
 			if( needsHusband ) {
 				let husband = this.combinedList.find( spouse => spouse.canBeHusbandOf(person) );
-				husband = husband || this.makeHusbandOf(person);
+				husband = husband || this.makeDeadHusbandOf(person);
 				person.spouse = husband;
 				console.assert( husband );
 			}
@@ -128,6 +128,7 @@ class CommunityBuilder {
 					p.isAlive &&
 					person.age < p.age &&
 					person.gender==p.gender &&
+					( !person.isDomestic || !p.isDomestic ) &&
 					(p.isSingle || p.isWidow || p.isWidower) &&
 					!p.hasMinorChildren &&
 					p.culture.singleCohabitAgeMatch(p,person)
@@ -147,6 +148,13 @@ class CommunityBuilder {
 				return;
 			}
 			doHousehold( person );
+		});
+
+		// Transfer people who 'houseAtWorkplace' into that venue
+		this.combinedList.traverse( person => {
+			if( person.jobType && person.jobType.houseAtWorkplace && person.isAlive && !person.household.isParasite ) {
+				person.household.mergeIntoVenue( person.venue );
+			}
 		});
 	}
 
@@ -183,11 +191,20 @@ class CommunityBuilder {
 	}
 
 	createVenueBySketch(sketch,isFirst) {
+		let mayAttach = venueType => {
+			if( !venueType.attachTo ) {
+				return true;
+			}
+			let venueTypeMatch = this.community.venueList.find( v=>venueType.attachTo[v.type.id] );
+			return !!venueTypeMatch;
+		}
+
+
 		let venueType;
 		let repLimit = 100;
 		do { 
 			venueType = sketch.table.pick();
-		} while( isFirst && venueType.neverPickFirst && --repLimit );
+		} while( ( !mayAttach(venueType) || (isFirst && venueType.neverPickFirst)) && --repLimit );
 		console.assert( repLimit );
 		let workforceRatio	= Math.min( 1.0, venueType.workforceRatio || sketch.workforceRatio );
 		console.assert( workforceRatio && Number.isFinite(workforceRatio) );
@@ -216,7 +233,12 @@ class CommunityBuilder {
 			.scanHash(
 				AspectTypeHash,
 				aspectType => aspectType.percentOfPopulation||0,
-				aspectType => { sketchHash[aspectType.id].workersPending++; sketchHash[aspectType.id].workersTotal++; }
+				aspectType => {
+					let numPeople = 1;
+					sketchHash[aspectType.id].workersPending += numPeople;
+					sketchHash[aspectType.id].workersTotal += numPeople;
+					return numPeople;
+				}
 			)
 			.produce( population )
 		;
@@ -305,6 +327,9 @@ class CommunityBuilder {
 
 		// put all buildings in their districts.
 		structureList.traverse( structure => {
+			if( structure.isParasite ) {
+				return;
+			}
 			console.assert( structure.district.id !== 'residential' );
 			console.assert( structure.district );
 			structure.circle = structure.district.findRandom( structure.tileRadius );
@@ -320,14 +345,14 @@ class CommunityBuilder {
 		// Now place the city center districts
 		let city = new Cluster();
 		Object.each( districtHash, (district,d) => {
-			if( district.isOutlier ) return;
+			if( district.isOutlier || district.radius<=0 ) return;
 			let circle = city.findRandom(district.radius);
 			district.moveBy(-district.x+circle.x, -district.y+circle.y);
 			city.add( district );
 		});
 
 		Object.each( districtHash, (district,d) => {
-			if( !district.isOutlier ) return;
+			if( !district.isOutlier || district.radius<=0  ) return;
 //			console.log( "outlier: "+district.id );
 			let circle = city.findRandom(district.radius);
 			district.moveBy(-district.x+circle.x, -district.y+circle.y);
@@ -383,6 +408,17 @@ class CommunityBuilder {
 			});
 		}
 
+		this.community.venueList.traverse( venue => {
+			if( venue.type.attachTo ) {
+				let eligible = this.community.venueList.filter( v => venue.type.attachTo[v.type.id] );
+				console.assert( eligible.length );
+				let table = new Pick.Table().scanArray( eligible, venue => venue.workerCapacity );
+				let target = table.pick().circle;
+				console.assert( target );
+				[venue.circle.x,venue.circle.y] = Distance.clockPick( target.x, target.y, (venue.circle.radius+target.radius)*0.50 );
+			}
+		});
+
 		this.community.unitCircle = unitCircle;
 
 		this.community.districtHash = new HashManager();
@@ -396,11 +432,28 @@ class CommunityBuilder {
 
 	build(population) {
 
+		let waterCapacity = population;
+		let waterVenues = new Pick.Table().scanHash(
+			AspectTypeHash.water.venueTypeHash,
+			venueType => venueType.chance
+		);
+		while( waterCapacity > 0 ) {
+			let venueType = waterVenues.pick();
+			let workerCapacity = Math.randInt(1,venueType.workforceMax);
+			let directProduction = workerCapacity;
+			this.community.venueList.add( new Venue( venueType, workerCapacity, directProduction ) );
+			waterCapacity -= workerCapacity;
+		}
+
 		// Create all the venues that serve this population
 		let sketchVenueList = this.createSketchVenues(population);
 
 		// Put eligible venues into the community
-		sketchVenueList.traverse( venue => !venue.isFakeVenue ? this.community.venueList.add(venue) : null );
+		sketchVenueList.traverse( venue => {
+			if( !venue.isFakeVenue ) {
+				this.community.venueList.add(venue);
+			}
+		});
 
 		// Add people appropriate to all the venues
 		sketchVenueList.traverse( venue => {
