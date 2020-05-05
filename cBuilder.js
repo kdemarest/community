@@ -124,15 +124,16 @@ class CommunityBuilder {
 
 			if( !person.hasMinorChildren ) {
 				// Find any unmarried same-gender person my age.
-				let single =  this.combinedList.find( p => 
-					p.isAlive &&
-					person.age < p.age &&	// this is to make sure we avoid recursion, not a cultural statement
-					person.culture.singleMayLiveWith(person,p)
+				let host =  this.combinedList.find( host => 
+					host.isAlive &&
+					host.respect > person.respect &&	// this is to make sure we avoid recursion, not a cultural statement
+					host.culture.hostMayAccomodate(host,person)
 				);
-				if( single && Math.random()*(single._inMyHouse||0) < 1 ) {
-					single._inMyHouse = (single._inMyHouse||0)+1;
+				if( host && Math.random()*(host._inMyHouse||0) < 1 ) {
+					host._inMyHouse = (host._inMyHouse||0)+1;
 					person._inMyHouse = (person._inMyHouse||0)+1;
-					return person.household = doHousehold( single );
+					console.log( person.nameFirst+'/'+person._inMyHouse+' shacking up with '+host.nameFirst+'/'+host._inMyHouse );
+					return person.household = doHousehold( host );
 				}
 			}
 

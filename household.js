@@ -32,8 +32,7 @@ class Household extends StructureHolder {
 		this.isWithinVenue = true;
 		this.structure = venue.structure;
 		this.isParasite = true;	// I don't own my structure
-		console.assert( venue.household == null || venue.household === this );
-		venue.household = this;
+		venue._addHousehold(this);
 	}
 	get textSummary() {
 		return this.head.nameLast+' ('+this.bedCapacity+')';

@@ -536,7 +536,8 @@ let AspectTypeHash = {
 					priest: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'priest.png' },
 						wealth: 'medium',
-						houseAtWorkplace: true
+						houseAtWorkplace: true,
+						respectBonus: 1700	// the 1000 makes up for the wealth gap.
 					},
 					acolyte: {
 						icon: { img: 'person.png', holding: 'priest.png' },
@@ -572,6 +573,7 @@ let AspectTypeHash = {
 					doctor: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' },
 						wealth: 'high'
+						respectBonus: 600	// the 1000 makes up for the wealth gap.
 					},
 					nurse: {
 						icon: { img: 'person.png', holding: 'doctor.png' },

@@ -68,9 +68,14 @@ class Person {
 		this.id			= Date.makeUid();
 		this.venue		= venue;
 		if( venue ) { venue.workerAdd(this); }
-		this.age		= culture.generateAge(jobType.isChild);
-		this.gender		= culture.generateGender();
+		this.age		= inject.age!==undefined ? inject.age : culture.generateAge(jobType.isChild);
+		delete inject.age;
+		this.gender		= inject.gender || culture.generateGender();
+		delete inject.gender;
+
 		this.nameFirst	= String.capitalize( this.culture.generateName(this.gender) );
+		this.culture.validateNameFirst(this.nameFirst,this.gender);
+
 		this._skillRating = {
 			[jobType.id]: this.culture.generateSkillIndex()
 		};
@@ -89,6 +94,15 @@ class Person {
 			}
 			this.nominalChildren = maxChildren; //Math.randInt( 0, maxChildren );
 		}
+	}
+
+	set gender(value) {
+		console.assert( value =='M' || value == 'F' );
+		console.assert( this._gender === undefined );
+		this._gender = value;
+	}
+	get gender() {
+		return this._gender;
 	}
 
 	statGet(statId) {
@@ -192,7 +206,7 @@ class Person {
 		return !this.isDead;
 	}
 	get isMarried() {
-		return this.spouse;
+		return this.spouse && this.spouse.isAlive;
 	}
 	get siblingList() {
 		console.assert( this.mother );
@@ -371,7 +385,7 @@ class Person {
 		return this.textSkillShort+' '+this.textJob;
 	}
 	get textInfo() {
-		return String.capitalize(this.titleJob)+' '+this.nameLast+' '+this.gender+this.age;
+		return String.capitalize(this.titleJob)+' '+this.nameFirst+' '+this.nameLast;
 	}
 	get textSummary() {
 		return this._textSummaryMake();

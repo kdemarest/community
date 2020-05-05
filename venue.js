@@ -50,7 +50,7 @@ class Venue extends StructureHolder {
 		this.directProduction = directProduction;
 		this.workerHash	= new HashManager();
 		this.district	= null;
-		this.household	= null;
+		this.householdList	= [];
 	}
 //-------------------------
 	get preferredDistrictId() {
@@ -96,6 +96,9 @@ class Venue extends StructureHolder {
 	}
 	get adequatelyStaffed() {
 		return this.percentWorked >= 0.80;
+	}
+	_addHousehold(household) {
+		this.householdList.push(household);
 	}
 	produce(gatherFn) {
 		if( !this.directProduction ) {

@@ -25,6 +25,11 @@ class NameRepoGendered {
 		this.maleRepo   = new NameRepo(namesMale);
 		this.femaleRepo = new NameRepo(namesFemale);
 	}
+	validate(nameFirst,genderLetter) {
+		let src = genderLetter=='M' ? this.maleRepo.nameList : this.femaleRepo.nameList;
+		let n = src.find( name => name==nameFirst );
+		console.assert(n);
+	}
 	pickUnique(genderLetter) {
 		console.assert( String.validGender(genderLetter) );
 		return genderLetter=='M' ? this.maleRepo.pickUnique : this.femaleRepo.pickUnique;
@@ -86,13 +91,17 @@ class CultureBase {
 		return n;
 	}
 
-	singleMayLiveWith(person,p) {
-		return person.gender==p.gender &&
-			( !person.isDomestic || !p.isDomestic ) &&
-			(p.isSingle || p.isWidow || p.isWidower) &&
-			!p.hasMinorChildren &&
-			(!p.houseAtWorkplaceIfSingle && !person.houseAtWorkplaceIfSingle) &&
-			p.culture.singleCohabitAgeMatch(p,person)
+	hostMayAccomodate(host,person) {
+		if( host.isMarried && ((host._inMyHouse||0)+(host.spouse._inMyHouse||0) >= 1 ) ) {
+			return false;
+		}
+		return person.gender==host.gender &&
+			!person.isMarried &&
+			( !person.isDomestic || !host.isDomestic ) &&
+			(host.isSingle || host.isWidow || host.isWidower) &&
+			!host.hasMinorChildren &&
+			(!host.houseAtWorkplaceIfSingle && !person.houseAtWorkplaceIfSingle) &&
+			host.culture.singleCohabitAgeMatch(host,person)
 		;
 	}
 
@@ -117,6 +126,9 @@ class CultureBase {
 		);
 	}
 
+	validateNameFirst(nameFirst,gender) {
+		this.nameRepo.validate(nameFirst,gender);
+	}
 
 	generateName(genderLetter) {
 		console.assert( String.validGender(genderLetter) );
