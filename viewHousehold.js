@@ -22,7 +22,7 @@ View.Household = class extends View.Showable {
 			let m = household.memberList.slice();
 			m.sort( (a,b) => Math.sign( b.respect-a.respect ) );
 			let headSurname = household.head.nameLast;
-			s += m.map( p => String.capitalize(p.textFamilyRole+' '+anchor(p,p.nameFirst+(p.nameLast!=headSurname?' '+p.nameLast:''))+' '+p.textGenderAge+' '+p.textJobSummary) ).join('<br>');
+			s += m.map( p => String.capitalize((p.isTwin?'Twin ':'')+p.textFamilyRole+' '+anchor(p,p.nameFirst+(p.nameLast!=headSurname?' '+p.nameLast:''))+' '+p.textGenderAge+' '+p.textJobSummary) ).join('<br>');
 
 			finish(s);
 			guiMessage( 'viewShow', this.divId );

@@ -185,7 +185,14 @@ PanelCity.Elements = function(root) {
 		}
 		visual[structure.id].link('structureButton')
 			.on('click',()=>{
-				let household = structure.isHousehold ? structure : structure.household;
+				let household;
+				if( structure.isHousehold ) {
+					household = structure;
+				}
+				else
+				if( structure.householdCount > 0 ) {
+					household = structure.householdGet(0);
+				}
 				guiMessage( household ? 'showHousehold' : 'showVenue', household );
 			})
 			.on('mouseover',()=>data.setInfo(structure.textSummary+' in '+structure.district.id))

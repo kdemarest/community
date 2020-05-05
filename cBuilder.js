@@ -125,6 +125,7 @@ class CommunityBuilder {
 			if( !person.hasMinorChildren ) {
 				// Find any unmarried same-gender person my age.
 				let host =  this.combinedList.find( host => 
+					(host._inMyHouse||0) < 3 &&
 					host.isAlive &&
 					host.respect > person.respect &&	// this is to make sure we avoid recursion, not a cultural statement
 					host.culture.hostMayAccomodate(host,person)
@@ -195,7 +196,7 @@ class CommunityBuilder {
 				return;
 			}
 			person.siblingList.forEach( sibling => {
-				if( person.age == sibling.age ) {
+				if( person !== sibling && person.age == sibling.age ) {
 					person.twin = sibling;
 				}
 			});
@@ -474,6 +475,9 @@ class CommunityBuilder {
 
 		// Now make everyone related, creating dead ancestors as needed
 		this.createRelatedness();
+
+		// Once you know your mother and siblings, you can find twins.
+		this.detectTwins();
 
 		// Give a place to live
 		this.createHouseholds();

@@ -160,12 +160,13 @@ class Person {
 		person._spouse = this;
 	}
 	get isTwin() {
-		return !!this._twin;
+		return this._twin;
 	}
 	get twin() {
 		return this._twin;
 	}
 	set twin(person) {
+		console.assert(person);
 		this._twin = person;
 		person._twin = this;
 	}

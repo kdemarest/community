@@ -47,7 +47,7 @@ let AspectTypeHash = {
 				workforceRatio: 0.50,
 				workforceMax: 50,
 				district: 'outlier',
-				tilesPerWorker: 6,
+				tilesPerWorker: 12,
 //				domicile: { farmhouse: 9 },		// 9 tiles per inhabitant; if domicile not specified, it is just a house:9
 //				venue: { field: 15 },		// if not specified, it is the same as the venuename
 				jobInitHash: {
@@ -572,7 +572,7 @@ let AspectTypeHash = {
 				jobInitHash: {
 					doctor: {
 						mustPickFirst: true, icon: { img: 'person.png', holding: 'doctor.png' },
-						wealth: 'high'
+						wealth: 'high',
 						respectBonus: 600	// the 1000 makes up for the wealth gap.
 					},
 					nurse: {

@@ -97,6 +97,13 @@ class Venue extends StructureHolder {
 	get adequatelyStaffed() {
 		return this.percentWorked >= 0.80;
 	}
+	get householdCount() {
+		return this.householdList.length;
+	}
+	householdGet(index) {
+		console.assert( index >= 0 && index < this.householdList.length );
+		return this.householdList[index];
+	}
 	_addHousehold(household) {
 		this.householdList.push(household);
 	}
