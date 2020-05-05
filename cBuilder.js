@@ -124,16 +124,14 @@ class CommunityBuilder {
 
 			if( !person.hasMinorChildren ) {
 				// Find any unmarried same-gender person my age.
-				let single =  this.combinedList.find( p =>
+				let single =  this.combinedList.find( p => 
 					p.isAlive &&
-					person.age < p.age &&
-					person.gender==p.gender &&
-					( !person.isDomestic || !p.isDomestic ) &&
-					(p.isSingle || p.isWidow || p.isWidower) &&
-					!p.hasMinorChildren &&
-					p.culture.singleCohabitAgeMatch(p,person)
+					person.age < p.age &&	// this is to make sure we avoid recursion, not a cultural statement
+					person.culture.singleMayLiveWith(person,p)
 				);
-				if( single ) {
+				if( single && Math.random()*(single._inMyHouse||0) < 1 ) {
+					single._inMyHouse = (single._inMyHouse||0)+1;
+					person._inMyHouse = (person._inMyHouse||0)+1;
 					return person.household = doHousehold( single );
 				}
 			}
@@ -188,6 +186,19 @@ class CommunityBuilder {
 			this.combinedList.add( person );
 			--workersRemaining;
 		}
+	}
+
+	detectTwins() {
+		this.combinedList.traverse( person => {
+			if( !person.mother ) {
+				return;
+			}
+			person.siblingList.forEach( sibling => {
+				if( person.age == sibling.age ) {
+					person.twin = sibling;
+				}
+			});
+		});
 	}
 
 	createVenueBySketch(sketch,isFirst) {

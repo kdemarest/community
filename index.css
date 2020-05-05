@@ -105,25 +105,8 @@ div.wellbeingInfo {
 	position: relative;
 }
 
-#viewMorale {
-	width: 100%;
-	height: 100%;
-	border-top: 1px solid #d2d2d2;
-	color: #d2d2d2;
-	overflow-y: auto;
-	overflow-x: hidden;
-}
-
-#viewWellbeing {
-	width: 100%;
-	height: 100%;
-	border-top: 1px solid #d2d2d2;
-	color: #d2d2d2;
-	overflow-y: auto;
-	overflow-x: hidden;
-}
-
-#viewHousehold {
+div.midview {
+	position:absolute;
 	width: 100%;
 	height: 100%;
 	border-top: 1px solid #d2d2d2;
@@ -131,6 +114,29 @@ div.wellbeingInfo {
 	white-space: normal;
 	overflow-y: auto;
 	overflow-x: hidden;
+}
+
+#viewMorale {
+}
+
+#viewWellbeing {
+}
+
+#viewHousehold {
+}
+
+#viewPerson {
+}
+
+a {
+	color: #aae;
+	cursor: pointer;
+	border: 1px solid rgba(0,0,0,0);
+}
+
+a:hover {
+	color: blue;
+	Qborder: 1px solid blue;
 }
 
 #viewSituation {

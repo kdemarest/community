@@ -21,9 +21,9 @@ class NameRepo {
 };
 
 class NameRepoGendered {
-	constructor(nameListGendered) {
-		this.maleRepo = new NameRepo(nameListGendered.male);
-		this.femaleRepo = new NameRepo(nameListGendered.female);
+	constructor(namesMale,namesFemale) {
+		this.maleRepo   = new NameRepo(namesMale);
+		this.femaleRepo = new NameRepo(namesFemale);
 	}
 	pickUnique(genderLetter) {
 		console.assert( String.validGender(genderLetter) );
@@ -32,10 +32,10 @@ class NameRepoGendered {
 }
 
 class CultureBase {
-	constructor(nameFirstList,nameLastList) {
+	constructor(nameFirstHash,nameLastList) {
 		this.isCulture = true;
 
-		this.nameRepo = new NameRepoGendered(nameFirstList);
+		this.nameRepo = new NameRepoGendered(nameFirstHash.male,nameFirstHash.female);
 		this.surnameRepo = new NameRepo(nameLastList);
 //			['smith','jones','johnson','white','pickens','bivens','taylor','parker','jones','brown','black','fielding','williams','johnson','davies','evans','thomas','roberts','walker','wright','robinson','thompson','hughes','edwards','green','lewis','wood','harris','martin','jackson','clarke'].map( n => String.capitalize(n) )
 //		);
@@ -65,6 +65,58 @@ class CultureBase {
 	chanceMarried(person) {
 		return Math.fChance( 0.1 * Math.clamp(person.age-this.marryingAge,0,9) );
 	}
+
+	getRespect(person) {
+		let wealthLookup = {
+			none: 0,
+			low: 1000,
+			medium: 2000,
+			high: 3000
+		}
+		let n = wealthLookup[person.wealth||'none'];
+
+		n += (person.jobType.respectBonus||0);
+
+		if( person.isHusband ) n += 500;
+		else if( person.isWife ) n += 400;
+		else if( person.isWidow || person.isWidower ) n += 300;
+		
+		n += person.age;
+
+		return n;
+	}
+
+	singleMayLiveWith(person,p) {
+		return person.gender==p.gender &&
+			( !person.isDomestic || !p.isDomestic ) &&
+			(p.isSingle || p.isWidow || p.isWidower) &&
+			!p.hasMinorChildren &&
+			(!p.houseAtWorkplaceIfSingle && !person.houseAtWorkplaceIfSingle) &&
+			p.culture.singleCohabitAgeMatch(p,person)
+		;
+	}
+
+	canBeMotherOf(person,kid) {
+		return (
+			person !== kid &&
+			person.isFemale &&
+			person.age > kid.age+person.culture.marryingAge &&
+			person.age < person.culture.menopauseAge+kid.age &&
+			person.allowAnotherKid
+		);
+	}
+	canBeHusbandOf(person,wife) {
+		return (
+			wife !== person &&
+			person.gender=='M' &&
+			!person.spouse &&
+			!person.isSiblingOf(wife) &&
+			person.culture.marryable(person) &&
+			person.culture.spouseAgeMatch(person,wife) &&
+			( !wife.isDomestic || !person.isDomestic )
+		);
+	}
+
 
 	generateName(genderLetter) {
 		console.assert( String.validGender(genderLetter) );

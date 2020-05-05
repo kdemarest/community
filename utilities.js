@@ -680,6 +680,24 @@ Module.add('utilities2',function() {
 		}
 	};
 
+	// All these curvese take input from 0 to 1 and return a value from 0 to 1
+	let Curve = {
+		bounded:	(pct) =>	Math.clamp(pct,0.0,1.0),
+		linear:		(pct) =>	pct,
+		inverse: 	(pct) =>	1-pct,
+		// Rises a bit slowly. at 70% it is only half way
+		squared:	(pct) =>	pct*pct,
+		// Rises a bit fast. at 50% it hits 75%
+		invSquared:	(pct) =>	1-(1-pct)*(1-pct),
+		// Rises slowly. at 80% it is only half way
+		cubed:		(pct) =>	pct*pct*pct,
+		// Rises fast. At 10% it hits 27%, at 25% it hits 58%, at 50% it hits 87%
+		invCubed:	(pct) =>	1-(1-pct)*(1-pct)*(1-pct),
+		sine:		(pct) =>	Math.sin( pct * Math.PI / 2),
+		// Nice S centered on 0.5. Touches 0 and 1 within 0.01%
+		logistic:	(pct) =>	1.005 / ( 1+ Math.pow(Math.E,-12*(x-0.5)) ) - 0.0025,
+	};
+
 	let Hash = Object;
 
 	class Finder {
@@ -834,6 +852,7 @@ Module.add('utilities2',function() {
 		Cookie: Cookie,
 		Hash: Hash,
 		Distance: Distance,
+		Curve: Curve,
 		Finder: Finder,
 		ListManager: ListManager,
 		HashManager: HashManager,

@@ -120,24 +120,10 @@ class Person {
 		return this.childList.length < this.nominalChildren;
 	}
 	canBeMotherOf(kid) {
-		return (
-			this !== kid &&
-			this.isFemale &&
-			this.age > kid.age+this.culture.marryingAge &&
-			this.age < this.culture.menopauseAge+kid.age &&
-			this.allowAnotherKid
-		);
+		return this.culture.canBeMotherOf(this,kid);
 	}
 	canBeHusbandOf(wife) {
-		return (
-			wife !== this &&
-			this.gender=='M' &&
-			!this.spouse &&
-			!this.isSiblingOf(wife) &&
-			this.culture.marryable(this) &&
-			this.culture.spouseAgeMatch(this,wife) &&
-			( !wife.isDomestic || !this.isDomestic )
-		);
+		return this.culture.canBeHusbandOf(this,wife);
 	}
 	set mother(m) {
 		console.assert( m instanceof Person );
@@ -158,6 +144,16 @@ class Person {
 		console.assert( person.age >= this.culture.marryingAge );
 		this._spouse = person;
 		person._spouse = this;
+	}
+	get isTwin() {
+		return !!this._twin;
+	}
+	get twin() {
+		return this._twin;
+	}
+	set twin(person) {
+		this._twin = person;
+		person._twin = this;
 	}
 	get spouse() {
 		return this._spouse;
@@ -228,13 +224,19 @@ class Person {
 		return this.surname;
 	}
 	get nameFull() {
-		return this.nameFirst+(this.nameLast ? ' '+this.nameLast : '');
+		return this.titleDead + this.nameFirst+(this.nameLast ? ' '+this.nameLast : '');
 	}
 	get nameMaiden() {
 		if( !this.isWife || !this.father ) {
 			return;
 		}
 		return this.father.surname;
+	}
+	get respect() {
+		return this.culture.getRespect(this);
+	}
+	get titleDead() {
+		return this.isDead ? 'the late ' : '';
 	}
 	get titleParent() {
 		return this.isFemale ? 'mother' : 'father';
@@ -255,6 +257,21 @@ class Person {
 		if( this.age < 19 ) {
 			return 'teen';
 		}
+	}
+	get textMarriageRole() {
+		if( this.isWidow ) {
+			return  'widow';
+		}
+		if( this.isWidower ) {
+			return  'widower';
+		}
+		if( this.isHusband ) {
+			return 'husband';
+		}
+		if( this.isWife ) {
+			return 'wife';
+		}
+		return '';
 	}
 	get textRole() {
 		if( this.isOrphan ) {
@@ -328,17 +345,30 @@ class Person {
 			this.nameFirst+
 			(andLast ? ' '+this.nameLast+(maidenName ? ' (nee '+maidenName+')' : '') : '' )+
 			' '+this.gender+this.age+
-			(andJob ? ' '+this.textJob : '')
+			(andJob ? ' '+this.textJobSummary : '')
 		;
 	}
-	get textGenderAge() {
-		return this.gender+this.age;
+	get textInformalGender() {
+		return this.isMinor ? (this.gender=='M' ? 'boy' : 'girl') : this.gender=='M' ? 'man' : 'woman';
 	}
-	get textSkill() {
+	get textGender() {
+		return this.gender=='M' ? 'male' : 'female';
+	}
+	get textGenderAge() {
+		return this.gender+this.age; //+'/'+this.respect;
+	}
+	get textSkillLevel() {
+		let skillLevelName = ['unskilled','skilled','excellent','epic'];
+		return skillLevelName[Math.floor(this.skillAt(this.jobType.id))];
+	}
+	get textSkillShort() {
 		return 's'+this.skillAt(this.jobType.id)
 	}
 	get textJob() {
-		return this.textSkill+' '+String.capitalize(this.titleJob);
+		return String.capitalize(this.titleJob);
+	}
+	get textJobSummary() {
+		return this.textSkillShort+' '+this.textJob;
 	}
 	get textInfo() {
 		return String.capitalize(this.titleJob)+' '+this.nameLast+' '+this.gender+this.age;
@@ -363,7 +393,7 @@ class Person {
 			}
 			return s;
 		}
-		return 'Person: '+this.textSummaryFull+' the '+this.textJob+
+		return 'Person: '+this.textSummaryFull+' the '+this.textJobSummary+
 			(this.isCalledBoss?' (boss)':'')+
 			', produces '+this.textProduction;
 	}

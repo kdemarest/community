@@ -70,16 +70,17 @@ let AspectTypeHash = {
 				jobInitHash: {
 					shepherd: {
 						icon: { img: 'person.png', holding: 'shepherd.png' },
-						wealth: 'low', houseAtWorkplace: true
+						wealth: 'low', houseAtWorkplaceIfSingle: true
 					},
 					cowboy: {
 						icon: { img: 'person.png', holding: 'shepherd.png' },
-						wealth: 'low', houseAtWorkplace: true
+						wealth: 'low', houseAtWorkplaceIfSingle: true
 					}
 				}
 			},
 			hunting: {
 				icon: 'huntingGrounds.png',
+				iconAlpha: 0.50,
 				whatProduced: 'game',
 				workforceMax: 3,
 				district: 'outlier',
@@ -186,7 +187,8 @@ let AspectTypeHash = {
 				jobInitHash: {
 					captain: {
 						onePerVenue: true, icon: { img: 'person.png', holding: 'captain.png' },
-						wealth: 'medium'
+						wealth: 'medium',
+						respectBonus: 400
 					},
 					guard: {
 						useIfSingular: true,  icon: { img: 'person.png', holding: 'guard.png' },
@@ -207,7 +209,7 @@ let AspectTypeHash = {
 	},
 	entertainment: {
 		icon: 'entertainment.png',
-		percentOfPopulation: 0.10,
+		percentOfPopulation: 0.05,
 		venueInitHash: {
 			studio: {
 				icon: 'artist.png',
@@ -225,6 +227,7 @@ let AspectTypeHash = {
 				workforceMax: 12,
 				district: 'any',
 				tilesPerWorker: 3,
+				servesLiquor: true,
 				jobInitHash: {
 					bartender: {
 						mustPickFirst: true, onePerVenue: true, icon: { img: 'person.png', holding: 'bartender.png' },
@@ -272,7 +275,9 @@ let AspectTypeHash = {
 					ruler: {
 						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'ruler.png' },
 						wealth: 'high',
-						houseAtWorkplace: true
+						houseAtWorkplace: true,
+						isRuler: true,
+						respectBonus: 1000
 					},
 					planner: {
 						onePerVenue: true, icon: { img: 'person.png', holding: 'planner.png' },
@@ -297,7 +302,9 @@ let AspectTypeHash = {
 					noble: {
 						onePerVenue: true, mustPickFirst: true, icon: { img: 'person.png', holding: 'noble.png' },
 						wealth: 'medium',
-						houseAtWorkplace: true
+						houseAtWorkplace: true,
+						isNoble: true,
+						respectBonus: 500
 					},
 					servant: {
 						icon: { img: 'person.png', holding: 'servant.png' },
@@ -361,6 +368,7 @@ let AspectTypeHash = {
 				workforceMax: 12,
 				district: 'any',
 				isShop: true,
+				servesLiquor: true,
 				jobInitHash: {
 					brewer: {
 						icon: { img: 'person.png', holding: 'brewer.png' },
@@ -585,20 +593,20 @@ let AspectTypeHash = {
 	},
 	family: {
 		isHidden: true,
-		percentOfPopulation: 0.20,
+		percentOfPopulation: 0.25,
 		venueInitHash: {
 			family: {
 				icon: 'children.png',
 				isFakeVenue: true,
 				jobInitHash: {
 					child: {
-						chance: 70,
+						chance: 80,
 						icon: { img: 'children.png' },
 						isChild: true,
 						wealth: null
 					},
 					domestic: {
-						chance: 30,
+						chance: 20,
 						icon: { img: 'person.png' },
 						isDomestic: true,
 						wealth: null

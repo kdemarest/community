@@ -108,12 +108,12 @@ class Community {
 			return this.moraleCached;
 		}
 		// Morale is an instantaneous measurement
-		let moraleAll =
+		let moraleLinear =
 			this.moraleForAspect('family') +
 			this.moraleForAspect('security') +
 			this.moraleForAspect('entertainment') +
 			this.moraleForAspect('leadership');
-		this.moraleCached = moraleAll;
+		this.moraleCached = moraleLinear;
 		this.moraleDirty  = false;
 		//console.log('Morale=',Math.percent(this.moraleCached));
 		return this.moraleCached;

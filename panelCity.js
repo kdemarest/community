@@ -29,6 +29,12 @@ PanelCity.Layout = (function(root) {
 	this.info  = (v,text) => this.mapText(v,0.50,yInfo,yInfoSpan,text);
 	this.clock  = (v,text) => this.mapText(v,0.10,yTitle*0.5,yTitle,text);
 
+	this.mapPosInvert = (center,circle,zoom) => {
+		let dim = leastDim() * zoom;
+		center.x = -(circle.x * dim*0.5);
+		center.y = -(circle.y * dim*0.5);
+	}
+
 	this.mapPos = (v,circle,center,zoom,visible) => {
 		let dim = leastDim() * zoom;
 		v.x = w(0.5) + circle.x * dim*0.5 + center.x;
@@ -54,9 +60,9 @@ PanelCity.Layout = (function(root) {
 
 	this.personCircle = (v,circle,center,zoom,visible) => {
 		this.mapCircle(v,circle,center,zoom,visible);
-		v.thickness = Math.floor(Math.max(1,0.7*zoom));
-		v.color = v.isHovered ? 'cyan' : 'white';	//'rgba(0,0,0,0)'; 
-		//v.fill = v.isHovered ? 'cyan' : 'black';
+		v.thickness = (v.isSelected||v.isHovered ? 3 : 1) * Math.floor(Math.max(1,0.7*zoom));
+		v.color = v.isSelected ? 'green' : v.isHovered ? 'blue' : 'grey';	//'rgba(0,0,0,0)'; 
+		//v.fill  = v.isSelected ? 'grey' : 'black';
 	}
 
 
@@ -97,8 +103,8 @@ PanelCity.Visuals = function (root) {
 		let icon	= person.icon;
 		console.assert(icon);
 		let holding	= person.iconHolding;
-		visuals[person.id+'Bg'] = [ new Visual.Circle('blue','black'), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
-		visuals[person.id] = [ new Visual.Sprite(holding||icon), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
+		visuals[person.id] = [ new Visual.Circle('blue','black'), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
+		visuals[person.id+'Main'] = [ new Visual.Sprite(holding||icon), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
 //		if( holding ) {
 //			visuals[person.id+'Held'] = [ new Visual.Sprite(holding), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
 //		}
@@ -178,24 +184,25 @@ PanelCity.Elements = function(root) {
 			return;
 		}
 		visual[structure.id].link('structureButton')
-			.on('click',()=>{})
+			.on('click',()=>{
+				let household = structure.isHousehold ? structure : structure.household;
+				guiMessage( household ? 'showHousehold' : 'showVenue', household );
+			})
 			.on('mouseover',()=>data.setInfo(structure.textSummary+' in '+structure.district.id))
 			.on('mouseout',()=>data.setInfo(''))
 
 	});
 
 	data.person.traverse( person => {
-		visual[person.id].link('personButton')
+		visual[person.id+'Main'].link('personButton')
 			.on('click',()=>{
-				guiMessage( 'showHousehold', person.household );
+				guiMessage( 'showPerson', person );
 			})
 			.on('mouseover',() => {
-				data.setInfo(person.textInfo);
-				visual[person.id+'Bg'].isHovered=true;
+				guiMessage( 'hoverPerson', person );
 			})
 			.on('mouseout',() => {
-				data.setInfo('');
-				visual[person.id+'Bg'].isHovered=false;
+				guiMessage( 'hoverPerson', null );
 			})
 
 	});

@@ -63,21 +63,9 @@ class Household extends StructureHolder {
 		if( this.memberList.length == 1 ) {
 			return this.memberList[0];
 		}
-		let person = this.memberList.find( person => person.isHusband && !person.isBum && !person.isDomestic );
-		if( !person ) {
-			person = this.memberList.find( person => person.isWife && !person.isBum && !person.isDomestic );
-		}
-		if( !person ) {
-			person = this.memberList.find( person => person.isWidower && !person.isBum && !person.isDomestic );
-		}
-		if( !person ) {
-			person = this.memberList.find( person => person.isWidow && !person.isBum && !person.isDomestic );
-		}
-		if( !person ) {
-			// Choose the oldest.
-			person = this.memberList[0];
-			this.memberList.forEach( p => person = p.age > person.age ? p : person );
-		}
+		let person = this.memberList[0];
+		this.memberList.forEach( p => person = (p.respect > person.respect) ? p : person );
+
 		console.assert( person );
 		return person;
 	}

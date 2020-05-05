@@ -89,6 +89,14 @@ Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 				return picker.pick().circle;
 			}
 		}));
+		this.add( 'liquor',   new Habit.LocationType('w', {
+			getLocation: (habit) => {
+				let picker = habit.venuePicker( venue =>
+					venue.type.servesLiquor ? habit.distanceFrom(venue) : 0
+				);
+				return picker.pick().circle;
+			}
+		}));
 	}
 }();
 
@@ -102,8 +110,15 @@ Habit.ActivityTypeHash = new class extends Habit.GlyphableHash {
 		this.add( 'eat',		new Habit.ActivityType( 'E', { home:1, eatery:1 }) );
 		this.add( 'work',		new Habit.ActivityType( 'w', { work:1 }) );
 		this.add( 'visit',		new Habit.ActivityType( 'v', { visit:1 }) );
+		this.add( 'drink',		new Habit.ActivityType( 'v', { liquor:1 }) );
 	}
 }();
+/*
+The next thing to do is go through all the different jobTypes and give them
+sensible schedules. Farmers and fishers wake quite early and return early.
+Blue collar spends time in tavern.
+etc.
+*/
 
 Habit.Manager = class {
 	constructor(person) {

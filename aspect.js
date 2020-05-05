@@ -308,7 +308,7 @@ Aspect.Venue = class extends Aspect.Base {
 	}
 	get percentOperational() {
 //		this.community.venueList.traverse( venue => console.log(venue.isOperational ? venue.workerCapacity : 0,venue.id ) );
-		let venueCount = this.community.venueList.sum( venue => venue.isOperational ? venue.workerCapacity : 0 );
+		let venueCount = this.community.venueList.sum( venue => venue.isOperational ? venue.workerCount : 0 );
 		return venueCount / this.community.population;
 	}
 }

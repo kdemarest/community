@@ -5,6 +5,21 @@ const fs = require('fs');
 //'Great Britain','Ireland','USA','Italy','Malta','Portugal','Spain','France','Belgium','Luxembourg','the Netherlands','East Frisia','Germany','Austria','Switzerland','Iceland','Denmark','Norway','Sweden','Finland','Estonia','Latvia','Lithuania','Poland','Czech Republic','Slovakia','Hungary','Romania','Bulgaria','Bosnia and Herzegovina','Croatia','Kosovo','Macedonia','Montenegro','Serbia','Slovenia','Albania','Greece','Russia','Belarus','Moldova','Ukraine','Armenia','Azerbaijan','Georgia','Kazakhstan/Uzbekistan,etc.','Turkey','Arabia/Persia','Israel','China','India/Sri Lanka','Japan','Korea','Vietnam','other countries'
 //];
 
+let genderToss = {
+	'=': true,
+}
+let genderHash = {
+	'M': ['M'],
+	'M?': ['M'],
+	'?M': ['M'],
+	'1M': ['M'],
+	'?': ['M'],
+	'F': ['F'],
+	'F?': ['F'],
+	'?F': ['F'],
+	'1F': ['F'],
+};
+
 class NameFirstParser {
 	constructor(NameFirst) {
 		this.NameFirst = NameFirst;
@@ -33,18 +48,6 @@ class NameFirstParser {
 		return n;
 	}
 	getGenderList(g) {
-		let genderHash = {
-			'M': ['M'],
-			'M?': ['M'],
-			'?M': ['M'],
-			'1M': ['M'],
-			'?': ['M'],
-			'F': ['F'],
-			'F?': ['F'],
-			'?F': ['F'],
-			'1F': ['F'],
-			'=': ['M','F']
-		};
 		this.check( genderHash[g], 'unknown gender code '+g );
 		return genderHash[g];
 	}
@@ -60,6 +63,11 @@ class NameFirstParser {
 		let parts = nameEquivs.split(' ');
 		let nameFirstComplex = parts[0].replace('+',' ');	// Yes, I'm discarding the informal equivalents.
 		let nameFirst = nameFirstComplex.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+		let genderTag = raw.sub(0,3).trim();
+
+		if( genderToss[genderTag] ) {	// means this name is an informal equivalent
+			return null;
+		}
 
 		if(nameFirst.match( /[^'a-zA-Z- ]/g ) ) {
 			return null;
@@ -81,7 +89,7 @@ class NameFirstParser {
 			let country = Object.keys(countryCodeHash)[0];
 			this.countryCodeUniques[country] = (this.countryCodeUniques[country]||0)+1;
 		}
-		let genderList = this.getGenderList( raw.sub(0,3).trim() );
+		let genderList = this.getGenderList( genderTag );
 		let name = new this.NameFirst( nameFirst, genderList, countryCodeHash );
 
 		return name;

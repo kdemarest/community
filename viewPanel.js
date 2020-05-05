@@ -105,6 +105,40 @@ View.City = class extends View.Panel {
 			root.addElements(	new PanelCity.Elements(root) );
 			root.visible = true;
 		});
+		this.selected = null;
+		this.hovered  = null;
+	}
+	select(id) {
+		if( this.selected ) {
+			this.selected.isSelected = false;
+		}
+		this.selected = this.panel.visual[id];
+		this.selected.isSelected = true;
+	}
+	hover(entity) {
+		if( this.hovered ) {
+			this.hovered.isHovered = false;
+			this.panel.data.setInfo('');
+		}
+		if( !entity ) {
+			this.hovered = null;
+			return;
+		}
+		this.hovered = this.panel.visual[entity.id];
+		this.panel.data.setInfo(entity.textInfo);
+		this.hovered.isHovered = true;
+	}
+	message( msg, payload ) {
+		super.message(...arguments);
+		if( msg == 'cityFocus' ) {
+			let person = payload;
+			let panel = this.panel;
+			this.select(payload.id);
+			panel.layout.mapPosInvert(panel.data.center,person.circle,panel.data.zoom);
+		}
+		if( msg == 'hoverPerson' ) {
+			this.hover(payload);
+		}
 	}
 }
 
