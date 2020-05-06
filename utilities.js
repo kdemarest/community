@@ -217,6 +217,9 @@ Module.add('utilities',function(){
 		}
 		return s;
 	}
+	Array.assure = function(a) {
+		return Array.isArray(a) ? a : [a];
+	}
 
 	//
 	// OBJECT
@@ -318,6 +321,14 @@ Module.add('utilities',function(){
 		for( let key in obj ) {
 			if( fn(obj[key],key) ) {
 				return obj[key];
+			}
+		}
+		return false;
+	}
+	Object.findKey = function(obj,fn) {
+		for( let key in obj ) {
+			if( fn(obj[key],key) ) {
+				return key;
 			}
 		}
 		return false;
@@ -497,6 +508,14 @@ ARRAY FORM
 			result = result.substr(2);
 		}
 		return result;
+	}
+
+	String.isLowercase = function(s) {
+		return s == s.toLowerCase();
+	}
+
+	String.startsWith = function(str,s) {
+		return str.substring(0,s.length) == s;
 	}
 
 	String.calcName = function(obj) {
@@ -826,8 +845,9 @@ Module.add('utilities2',function() {
 			this.hash = {};
 		}
 		add(id,data) {
-			console.assert( data.id == id );
+			console.assert( !data.id || data.id == id );
 			this.hash[id] = data;
+			data.id = id;
 		}
 		get(id) {
 			return this.hash[id];

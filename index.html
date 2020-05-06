@@ -10,6 +10,7 @@
 <script src="utilDebug.js" charset="utf-8"></script>
 
 <script src="utilities.js" charset="utf-8"></script>
+<script src="utilClone.js" charset="utf-8"></script>
 <script src="utilPick.js" charset="utf-8"></script>
 <script src="utilMarkup.js" charset="utf-8"></script>
 <script src="time.js" charset="utf-8"></script>
@@ -18,6 +19,9 @@
 <script src="dataNames.js" charset="utf-8"></script>
 <script src="dataCulture.js" charset="utf-8"></script>
 <script src="dataAspect.js" charset="utf-8"></script>
+<script src="quest.js" charset="utf-8"></script>
+<script src="dialog.js" charset="utf-8"></script>
+<script src="journal.js" charset="utf-8"></script>
 
 <script src="cLayout.js" charset="utf-8"></script>
 <script src="cBuilder.js" charset="utf-8"></script>
@@ -41,6 +45,8 @@
 <script src="viewSituation.js" charset="utf-8"></script>
 <script src="viewPerson.js" charset="utf-8"></script>
 <script src="viewHousehold.js" charset="utf-8"></script>
+<script src="viewDialog.js" charset="utf-8"></script>
+<script src="viewJournal.js" charset="utf-8"></script>
 
 <script src="dataFeed.js" charset="utf-8"></script>
 
@@ -89,7 +95,7 @@ Aspect.Situation = class {
 
 
 function main() {
-	let population = 200;
+	let population = 10;
 
 	let clock = new Time.Clock(1.0);
 
@@ -113,6 +119,7 @@ function main() {
 
 	Gui.panelTier = {
 		viewProductivity: 0,
+		viewJournal: 0,
 		viewMorale: 1,
 		viewWellbeing: 1,
 		viewHousehold: 1,
@@ -127,10 +134,13 @@ function main() {
 		this.add('situation',	new View.Situation(		'viewSituation' ) );
 		this.add('household',	new View.Household(		'viewHousehold' ) );
 		this.add('person',		new View.Person(		'viewPerson' ) );
+		this.add('dialog',		new View.Dialog(		'viewDialog' ) );
+		this.add('journal',		new View.Journal(		'viewJournal' ) );
 	}
 
 	let observer = {
-		community: community
+		community: community,
+		journal: new Journal()
 	};
 
 	let gui = Gui.createManager( ()=>{} );
@@ -198,15 +208,21 @@ function onResize() {
 	<div id="guiMain">
 		<div class='col0'>
 			<div id="guiCity">
-				<div id="viewCity">
+				<div id="viewCity" style="position:absolute;">
+				</div>
+				<div id="viewDialog" style="position:absolute; display:none;">
 				</div>
 			</div>
 		</div>
 		<div class='col1'>
 			<div id="guiCommunity">
-				<div id="viewProductivity">
+				<div id="guiTopPanel">
+					<div id="viewProductivity" class='topview'>
+					</div>
+					<div id="viewJournal" class='topview'>
+					</div>
 				</div>
-				<div id="guiSubPanels">
+				<div id="guiMidPanel">
 					<div id="viewMorale" class="midview">
 					</div>
 					<div id="viewWellbeing" class="midview">

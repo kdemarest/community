@@ -139,6 +139,9 @@ View.City = class extends View.Panel {
 		if( msg == 'hoverPerson' ) {
 			this.hover(payload);
 		}
+		if( msg == 'showMark' ) {
+			this.panel.data.mark = payload;
+		}
 	}
 }
 

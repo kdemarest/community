@@ -46,6 +46,7 @@ PanelCity.Layout = (function(root) {
 
 	this.structure = this.mapPos;
 	this.person    = this.mapPos;
+	this.mark      = this.mapPos;
 
 	this.mapCircle = (v,circle,center,zoom,visible) => {
 		let dim = leastDim() * zoom;
@@ -111,7 +112,8 @@ PanelCity.Visuals = function (root) {
 	});
 
 	visuals.clock = [ new Visual.Text('white',''), (v) => layout.clock(v,data.textClock) ];
-
+	let circleNop = {x:0,y:0,radius:1};
+	visuals.mark  = [ new Visual.Sprite('icons/mark.png'), (v) => layout.mark(v,data.mark?data.mark.circle:circleNop,data.center,data.zoom,!!data.mark) ];
 
 	visuals.dayButton  = [ new Visual.Div('Day >>',0.90,0.10) ];
 	visuals.hourButton = [ new Visual.Div('Hour >>',0.90,0.20) ];
@@ -202,8 +204,13 @@ PanelCity.Elements = function(root) {
 
 	data.person.traverse( person => {
 		visual[person.id+'Main'].link('personButton')
-			.on('click',()=>{
-				guiMessage( 'showPerson', person );
+			.on('click',(evt)=>{
+				if( evt.shiftKey ) {
+					guiMessage( 'talkPerson', person );
+				}
+				else {
+					guiMessage( 'showPerson', person );
+				}
 			})
 			.on('mouseover',() => {
 				guiMessage( 'hoverPerson', person );

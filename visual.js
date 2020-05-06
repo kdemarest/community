@@ -2,9 +2,33 @@ Module.add( 'visual', () => {
 
 let ImgCache = {};
 Node.prototype.on = function(...args) {
-	Node.prototype.addEventListener.call(this,...args);
+	console.assert(typeof args[0] === 'string');
+	let fn = args[1];
+	let groupId;
+	if( typeof fn === 'string' ) {
+		fn = args[2];
+		groupId = 'group_'+args[1];
+		this[groupId] = this[groupId] || [];
+	}
+	let handler = Node.prototype.addEventListener.call(this,args[0],fn);
+	if( groupId ) {
+		this[groupId].push({ type:args[0], handler: handler });
+	}
 	return this;
 }
+
+Node.prototype.off = function(...args) {
+	console.assert(typeof args[0] === 'string');
+	let groupId = 'group_'+args[0];
+	if( !this[groupId] ) {
+		return;
+	}
+	this[groupId].forEach( entry => {
+		Node.prototype.removeEventListener.call(this,entry.type,entry.handler);
+	});
+	delete this[groupId];
+}
+
 
 
 let ElementShadow = new class {

@@ -443,6 +443,30 @@ class CommunityBuilder {
 		});
 	}
 
+	determineQuests() {
+		this.community.personList.traverse( person => {
+			person.questHashFn = () => {
+				let questHash = {};
+				Object.each( Quest.Data, (questData,questId) => {
+					if( questData.appliesTo(person) ) {
+						let quest = new Quest.Base(
+							person,
+							questData,
+							{ item: 'cinnamon' }
+						);
+						questHash[quest.id] = quest;
+					}
+				});
+				Quest.list.forEach( quest => {
+					if( !questHash[quest.id] && quest.castIncludes(person) ) {
+						questHash[quest.id] = quest;
+					}
+				});
+				return questHash;
+			};
+		});
+	}
+
 	build(population) {
 
 		let waterCapacity = population;
@@ -490,6 +514,8 @@ class CommunityBuilder {
 			person.circle = new Circle(person.id,0,0,this.community.unitCircle.radius*personSizeCompareToSinglePersonHouse);
 			this.community[person.isAlive?'personList':'ancestorList'].add( person );
 		});
+
+		this.determineQuests();
 
 		this.community.initAspects();
 

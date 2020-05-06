@@ -17,7 +17,7 @@ class Markup {
 	}
 	anchor(data,text) {
 		let id = data.id+'-'+Date.makeUid();
-		let typeName = data.constructor.name;
+		let typeName = data.domClass || data.constructor.name;
 		let s = '<a id="'+id+'" class="'+typeName+'">'+text+'</a>';
 		this.onAnchorFn(data).forEach( listener => {
 			listener.id = id;

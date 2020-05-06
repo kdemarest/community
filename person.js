@@ -363,8 +363,14 @@ class Person {
 			(andJob ? ' '+this.textJobSummary : '')
 		;
 	}
+	get textBoyGirl() {
+		return this.gender=='M' ? 'boy' : 'girl';
+	}
+	get textManWoman() {
+		return this.gender=='M' ? 'man' : 'woman';
+	}
 	get textInformalGender() {
-		return this.isMinor ? (this.gender=='M' ? 'boy' : 'girl') : this.gender=='M' ? 'man' : 'woman';
+		return this.isMinor ? this.textBoyGirl : this.textManWoman;
 	}
 	get textGender() {
 		return this.gender=='M' ? 'male' : 'female';
@@ -542,7 +548,6 @@ class Person {
 		let amount = this.productionForAspect( this.jobFocus.produces.id );
 		return gatherFn( this.jobFocus.produces.id, amount );
 	}
-
 	tick(dt) {
 		this.habit.tick(dt);
 	}
