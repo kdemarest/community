@@ -40,7 +40,7 @@ Dialog.Manager = class {
 };
 
 
-Quest.aboutMe = {
+Quest.Data.aboutMe = {
 	appliesTo: person=>true,
 	stateId: 'main',
 	stateHash: {

@@ -108,6 +108,13 @@ Pick.Table = class {
 		}
 		debugger;
 	}
+	pickAllowEmpty() {
+		if( this.noChances() ) {
+			return null;
+		}
+		return this.pick();
+	}
+
 	noChances() {
 		for( let i=0 ; i<this.chance.length ; ++i ) {
 			if( this.chance[i] != 0 ) return false;		// negative chances supported.

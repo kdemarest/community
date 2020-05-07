@@ -451,6 +451,7 @@ class CommunityBuilder {
 					if( questData.appliesTo(person) ) {
 						let quest = new Quest.Base(
 							person,
+							questId,
 							questData,
 							{ item: 'cinnamon' }
 						);

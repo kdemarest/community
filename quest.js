@@ -31,7 +31,8 @@ Quest.Validator = new class {
 				Give: 1,
 				Take: 1,
 				Reward: 1,
-				Complete: 1
+				Complete: 1,
+				Prompt: 1
 			}
 		}
 	}
@@ -46,22 +47,23 @@ Quest.Validator = new class {
 			this.check(trail,type,key);
 		});
 	}
-	validate(id,questData) {
-		this.checkHash( id, 'quest', questData );
-		Object.each( this.stateHash, (state,stateId) => {
-			Object.each( state, (entryHash,id) => {
-				let isOn		= String.startsWith(id,'on');
-				let isKeyword	= !String.isLowercase(id.charAt(1));
+	validate(questId,questData) {
+		this.checkHash( questId, 'quest', questData );
+		Object.each( questData.stateHash, (state,stateId) => {
+			Object.each( state, (entryValue,entryKey) => {
+				let isOn		= String.startsWith(entryKey,'on');
+				let isKeyword	= !String.isLowercase(entryKey.charAt(0));
 				if( isKeyword || isOn ) {
-					this.check( id+'.stateHash.'+stateId, 'state', id );
+					this.check( questId+'.stateHash.'+stateId, 'state', entryKey );
 					if( isOn ) {
-						console.assert( this.stateHash[id] );
+						console.assert( questData.stateHash[entryValue] );
 					}
+					return;
 				}
-				let castId = id;
-				let castEntryHashList = Array.assure(entryHash);
+				let castId = entryKey;
+				let castEntryHashList = Array.assure(entryValue);
 				castEntryHashList.forEach( (castEntryHash,index) => {
-					this.checkHash( id+'.stateHash.'+stateId+'.'+castId+'['+index+']', 'cast', castEntryHash ); 
+					this.checkHash( questId+'.stateHash.'+stateId+'.'+castId+'['+index+']', 'cast', castEntryHash ); 
 				});
 			});
 		});
@@ -71,12 +73,13 @@ Quest.Validator = new class {
 Quest.list = [];
 
 Quest.Base = class {
-	constructor(giver,questData,castFill) {
-		Object.each( Quest.Data, (quest,questId) => Quest.Validator.validate(questId,quest) );
+	constructor(giver,questDataId,questData,castFill) {
+		Object.each( Quest.Data, (questData,questId) => Quest.Validator.validate(questId,questData) );
 
 		Quest.list.push(this);
 
-		this.id			= Date.makeUid();
+		this.id			= questDataId+'.'+Date.makeUid();
+		this.questDataId = questDataId;
 		this.giver		= giver;
 		this.stateId	= null;
 		this.stateHash	= Object.assign({},Object.clone(questData.stateHash));
@@ -104,6 +107,9 @@ Quest.Base = class {
 				throw 'Error key '+castId+' was not filled at quest inception.';
 			}
 			castHash[castId] = typeof valueOrFn === 'function' ? valueOrFn(this.context) : valueOrFn;
+			if( !castHash[castId] ) {
+				throw "Unable to fill cast ["+castId+"] in "+this.questDataId;
+			}
 		});
 		return castHash;
 	}
@@ -129,7 +135,7 @@ Quest.Base = class {
 		return this.beenInState[this.stateId];
 	}
 	stateEnter(stateId,isRevert) {
-		if( stateId == this.stateId ) {
+		if( !stateId || stateId == this.stateId ) {
 			return false;
 		}
 
@@ -174,8 +180,17 @@ Quest.Base = class {
 	pickItem(fn) {
 		return 'cinnamon';
 	}
-	pickPerson(fn) {
-		return this.giver.community.personList.pick( person => !this.castIncludes(person) && fn(person) );
+	get personList() {
+		return this.giver.community.personList;
+	}
+	pickPerson(fnList) {
+		let person;
+		fnList = Array.assure(fnList);
+		fnList.every( fn => {
+			person = this.personList.pick( person => !this.castIncludes(person) && fn(person) );
+			return !person;
+		});
+		return person;
 	}
 	journalFail() {
 		this.failed = true;
@@ -264,7 +279,11 @@ Quest.Data.Fetch = {
 	castSetup: {
 		giver:	null,
 		item:	null,	// Means you must provide one
-		person:	c=>c.pickPerson( ()=>true ),
+		person:	c=>c.pickPerson([
+			p=>p.jobType.id=='grocer',
+			p=>p.jobType.produces.id=='food',
+			p=>p.isAlive
+		])
 	},
 	appliesTo: entity=>entity.isPerson,	// so, could be an item etc.
 	stateId: 'intro',
@@ -278,7 +297,6 @@ Quest.Data.Fetch = {
 			},
 		},
 		invite: {
-			ModalOf: 'intro',
 			giver: [
 				{	Q: 'I will get it, no problem',
 					A:	c=>'Great! Just go visit '+c.person.nameFull+' and get it.',
@@ -300,7 +318,7 @@ Quest.Data.Fetch = {
 			},
 			person: {
 				Ensure: c=>!c.person.has(c.item) ? c.person.inventory.add(c.item) : null,
-				Q:	c=>c.person.nameFull+' says you have '+c.item+' for them.',
+				Q:	c=>c.giver.nameFull+' would like some '+c.item+'.',
 				A:	'Oh, yes I do. Here you go!',
 				Give: c=>c.player.inventory.add(c.item),	// comes with an automatic note tht you got it
 				onQ: 'gotIt'

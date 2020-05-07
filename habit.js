@@ -68,7 +68,7 @@ Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 				let picker = habit.venuePicker( venue => 
 					venue.type.isShop ? habit.distanceFrom(venue) : 0
 				);
-				return picker.pick().circle;
+				return (picker.pickAllowEmpty() || habit.household).circle;
 			}
 		}));
 		this.add( 'work',   new Habit.LocationType('w', {
@@ -86,7 +86,7 @@ Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 				let picker = habit.venuePicker( venue =>
 					venue.produces.id=='entertainment' ? habit.distanceFrom(venue) : 0
 				);
-				return picker.pick().circle;
+				return (picker.pickAllowEmpty() || habit.household).circle;
 			}
 		}));
 		this.add( 'liquor',   new Habit.LocationType('w', {
@@ -94,7 +94,7 @@ Habit.LocationTypeHash = new class extends Habit.GlyphableHash {
 				let picker = habit.venuePicker( venue =>
 					venue.type.servesLiquor ? habit.distanceFrom(venue) : 0
 				);
-				return picker.pick().circle;
+				return (picker.pickAllowEmpty() || habit.household).circle;
 			}
 		}));
 	}
