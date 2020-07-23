@@ -86,6 +86,7 @@ class Person {
 		this.wounded	= false;
 		this.diseased	= false;
 		Object.assign( this, inject );
+		this.text		= new Person.Text(this);
 		if( this.isFemale ) {
 			this._childList = this._childList || [];
 			let maxChildren = Math.clamp( this.age-culture.marryingAge, 0, 4 );
@@ -123,8 +124,8 @@ class Person {
 	get isDomestic() {
 		return this.jobType.isDomestic;
 	}
-	get isBum() {
-		return this.jobType.isBum;
+	get isIndigent() {
+		return this.jobType.isIndigent;
 	}
 	get family() {
 		console.assert(false);
@@ -229,200 +230,8 @@ class Person {
 		return this.isMale && this.spouse && this.spouse.isDead;
 	}
 
-	get titleJob() {
-		return this.isMinor ? this.titleChildJob : this.jobType.name;
-	}
-	get name() {
-		return this.nameFirst;
-	}
-	get nameLast() {
-		return this.surname;
-	}
-	get nameFull() {
-		return this.titleDead + this.nameFirst+(this.nameLast ? ' '+this.nameLast : '');
-	}
-	get nameMaiden() {
-		if( !this.isWife || !this.father ) {
-			return;
-		}
-		return this.father.surname;
-	}
 	get respect() {
 		return this.culture.getRespect(this);
-	}
-	get titleDead() {
-		return this.isDead ? 'the late ' : '';
-	}
-	get titleParent() {
-		return this.isFemale ? 'mother' : 'father';
-	}
-	get titleChild() {
-		return this.isFemale ? 'daughter' : 'son';
-	}
-	get titleChildJob() {
-		if( this.age < 3 ) {
-			return 'baby';
-		}
-		if( this.age < 7 ) {
-			return 'toddler';
-		}
-		if( this.age < 13 ) {
-			return 'kid';
-		}
-		if( this.age < 19 ) {
-			return 'teen';
-		}
-	}
-	get textMarriageRole() {
-		if( this.isWidow ) {
-			return  'widow';
-		}
-		if( this.isWidower ) {
-			return  'widower';
-		}
-		if( this.isHusband ) {
-			return 'husband';
-		}
-		if( this.isWife ) {
-			return 'wife';
-		}
-		return '';
-	}
-	get textRole() {
-		if( this.isOrphan ) {
-			return 'orphan';
-		}
-		if( this.isWidow ) {
-			return  'widow';
-		}
-		if( this.isWidower ) {
-			return  'widower';
-		}
-		if( this.isDead && !this.mother && this.isMale ) {
-			return 'patriarch';
-		}
-		if( this.isDead ) {
-			return 'ancestor';
-		}
-		if( this.isHusband ) {
-			return 'husband';
-		}
-		if( this.isWife ) {
-			return 'wife';
-		}
-		if( this.isGrandfather ) {
-			return 'grandpa';
-		}
-		if( this.isGrandmother ) {
-			return 'gramma';
-		}
-
-		return '';
-	}
-	get textFamilyRole() {
-		if( this.isOrphan ) {
-			return 'orphan';
-		}
-		if( this.isWidow ) {
-			return  'widow';
-		}
-		if( this.isWidower ) {
-			return  'widower';
-		}
-		if( this.isDead ) {
-			return 'ancestor';
-		}
-		if( this.isHusband ) {
-			return 'husband';
-		}
-		if( this.isWife ) {
-			return 'wife';
-		}
-		if( this.isMinor ) {
-			return this.titleChild;
-		}
-		if( this.isGrandfather ) {
-			return 'grandpa';
-		}
-		if( this.isGrandmother ) {
-			return 'gramma';
-		}
-		if( this.isSingle ) {
-			return 'unmarried';
-		}
-
-		return '';
-	}
-	_textSummaryMake(andLast,andJob) {
-		let maidenName = this.nameMaiden;
-		let role = this.textRole;
-		return (role?role+' ':'')+
-			this.nameFirst+
-			(andLast ? ' '+this.nameLast+(maidenName ? ' (nee '+maidenName+')' : '') : '' )+
-			' '+this.gender+this.age+
-			(andJob ? ' '+this.textJobSummary : '')
-		;
-	}
-	get textBoyGirl() {
-		return this.gender=='M' ? 'boy' : 'girl';
-	}
-	get textManWoman() {
-		return this.gender=='M' ? 'man' : 'woman';
-	}
-	get textInformalGender() {
-		return this.isMinor ? this.textBoyGirl : this.textManWoman;
-	}
-	get textGender() {
-		return this.gender=='M' ? 'male' : 'female';
-	}
-	get textGenderAge() {
-		return this.gender+this.age; //+'/'+this.respect;
-	}
-	get textSkillLevel() {
-		let skillLevelName = ['unskilled','skilled','excellent','epic'];
-		return skillLevelName[Math.floor(this.skillAt(this.jobType.id))];
-	}
-	get textSkillShort() {
-		return 's'+this.skillAt(this.jobType.id)
-	}
-	get textJob() {
-		return String.capitalize(this.titleJob);
-	}
-	get textJobSummary() {
-		return this.textSkillShort+' '+this.textJob;
-	}
-	get textInfo() {
-		return String.capitalize(this.titleJob)+' '+this.nameFirst+' '+this.nameLast;
-	}
-	get textSummary() {
-		return this._textSummaryMake();
-	}
-	get textSummaryFull() {
-		return this._textSummaryMake(true);
-	}
-	get textProduction() {
-		return Math.fixed(this.productionBaselineForJob(this.jobType.id),2)+' '+this.jobType.produces.id;
-	}
-	get text() {
-		if( this.isDead ) {
-			let s = 'Dead person: '+this.textSummaryFull;
-			if( this.isFemale ) {
-				s += ' '+this.titleParent+' of '+this.childCount;
-			}
-			else {
-				s += ' husband of '+this.spouse.textSummary;
-			}
-			return s;
-		}
-		return 'Person: '+this.textSummaryFull+' the '+this.textJobSummary+
-			(this.isCalledBoss?' (boss)':'')+
-			', produces '+this.textProduction;
-	}
-	get textLineage() {
-		if( !this.father ) {
-			return this.textSummaryFull;
-		}
-		return this.textSummaryFull+', '+this.titleChild+' of '+this.father.textLineage;
 	}
 	get oppositeGender() {
 		return {M:'F',F:'M'}[this.gender];
@@ -550,6 +359,213 @@ class Person {
 	}
 	tick(dt) {
 		this.habit.tick(dt);
+	}
+}
+
+Person.Text = class {
+	constructor(person) {
+		this.person = person;
+	}
+	get genderShort() {
+		return this.person.isMale ? 'M' : 'F';
+	}
+	get age() {
+		return ''+this.person.age;
+	}
+	get gender() {
+		return this.person.gender=='M' ? 'male' : 'female';
+	}
+	get genderAge() {
+		return this.genderShort+this.age; //+'/'+this.respect;
+	}
+	get name() {
+		return this.person.nameFirst;
+	}
+	get nameFirst() {
+		return this.person.nameFirst;
+	}
+	get surname() {
+		return this.person.surname;
+	}
+	get nameLast() {
+		return this.person.surname;
+	}
+	get nameFull() {
+		return this.titleDead + this.nameFirst+(this.nameLast ? ' '+this.nameLast : '');
+	}
+	get nameMaiden() {
+		if( !this.person.isWife || !this.person.father ) {
+			return;
+		}
+		return this.person.father.surname;
+	}
+	get titleDead() {
+		return this.person.isDead ? 'the late ' : '';
+	}
+	get titleParent() {
+		return this.person.isFemale ? 'mother' : 'father';
+	}
+	get titleChild() {
+		return this.person.isFemale ? 'daughter' : 'son';
+	}
+	get childJob() {
+		if( this.person.age < 3 ) {
+			return 'baby';
+		}
+		if( this.person.age < 7 ) {
+			return 'toddler';
+		}
+		if( this.person.age < 13 ) {
+			return 'kid';
+		}
+		if( this.person.age < 19 ) {
+			return 'teen';
+		}
+	}
+	get marriageRole() {
+		if( this.person.isWidow ) {
+			return  'widow';
+		}
+		if( this.person.isWidower ) {
+			return  'widower';
+		}
+		if( this.person.isHusband ) {
+			return 'husband';
+		}
+		if( this.person.isWife ) {
+			return 'wife';
+		}
+		return '';
+	}
+	get role() {
+		if( this.person.isOrphan ) {
+			return 'orphan';
+		}
+		if( this.person.isWidow ) {
+			return  'widow';
+		}
+		if( this.person.isWidower ) {
+			return  'widower';
+		}
+		if( this.person.isDead && !this.person.mother && this.person.isMale ) {
+			return 'patriarch';
+		}
+		if( this.person.isDead ) {
+			return 'ancestor';
+		}
+		if( this.person.isHusband ) {
+			return 'husband';
+		}
+		if( this.person.isWife ) {
+			return 'wife';
+		}
+		if( this.person.isGrandfather ) {
+			return 'grandpa';
+		}
+		if( this.person.isGrandmother ) {
+			return 'gramma';
+		}
+
+		return '';
+	}
+	get familyRole() {
+		if( this.person.isOrphan ) {
+			return 'orphan';
+		}
+		if( this.person.isWidow ) {
+			return  'widow';
+		}
+		if( this.person.isWidower ) {
+			return  'widower';
+		}
+		if( this.person.isDead ) {
+			return 'ancestor';
+		}
+		if( this.person.isHusband ) {
+			return 'husband';
+		}
+		if( this.person.isWife ) {
+			return 'wife';
+		}
+		if( this.person.isMinor ) {
+			return this.titleChild;
+		}
+		if( this.person.isGrandfather ) {
+			return 'grandpa';
+		}
+		if( this.person.isGrandmother ) {
+			return 'gramma';
+		}
+		if( this.person.isSingle ) {
+			return 'unmarried';
+		}
+
+		return '';
+	}
+	_summaryMake(andLast,andJob) {
+		let maidenName = this.person.nameMaiden;
+		let role = this.role;
+		return (role?role+' ':'')+
+			this.nameFirst+
+			(andLast ? ' '+this.nameLast+(maidenName ? ' (nee '+maidenName+')' : '') : '' )+
+			' '+this.gender+this.age+
+			(andJob ? ' '+this.textJobSummary : '')
+		;
+	}
+	get boyGirl() {
+		return this.gender=='M' ? 'boy' : 'girl';
+	}
+	get manWoman() {
+		return this.gender=='M' ? 'man' : 'woman';
+	}
+	get informalGender() {
+		return this.isMinor ? this.boyGirl : this.manWoman;
+	}
+	get skillLevel() {
+		let skillLevelName = ['unskilled','skilled','excellent','epic'];
+		return skillLevelName[Math.floor(this.person.skillAt(this.person.jobType.id))];
+	}
+	get skillShort() {
+		return 's'+this.skillAt(this.person.jobType.id)
+	}
+	get job() {
+		return this.isMinor ? this.childJob : this.person.jobType.name;
+	}
+	get jobSummary() {
+		return this.skillShort+' '+this.job;
+	}
+	get info() {
+		return String.capitalize(this.job)+' '+this.nameFirst+' '+this.nameLast;
+	}
+	get summary() {
+		return this._summaryMake();
+	}
+	get summaryFull() {
+		return this._summaryMake(true);
+	}
+	get textProduction() {
+		return Math.fixed(this.productionBaselineForJob(this.jobType.id),2)+' '+this.jobType.produces.id;
+	}
+	get text() {
+		if( this.isDead ) {
+			let s = 'Dead person: '+this.textSummaryFull;
+			if( this.isFemale ) {
+				s += ' '+this.titleParent+' of '+this.childCount;
+			}
+			else {
+				s += ' husband of '+this.spouse.textSummary;
+			}
+			return s;
+		}
+		return 'Person: '+this.textSummaryFull+' the '+this.textJobSummary+
+			(this.isCalledBoss?' (boss)':'')+
+			', produces '+this.textProduction;
+	}
+	get textLineage() {
+		if( !this.father ) {
+			return this.textSummaryFull;
+		}
+		return this.textSummaryFull+', '+this.titleChild+' of '+this.father.textLineage;
 	}
 }
 

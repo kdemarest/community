@@ -18,11 +18,11 @@ View.Household = class extends View.Showable {
 				{ on: 'mouseout',	action: ()=>guiMessage('hoverPerson',null) }
 			]).convenient();
 		
-			let s = '<div><b>The '+household.textTitle+' Home</b></div>';
+			let s = '<div><b>The '+household.text.title+' Home</b></div>';
 			let m = household.memberList.slice();
 			m.sort( (a,b) => Math.sign( b.respect-a.respect ) );
-			let headSurname = household.head.nameLast;
-			s += m.map( p => String.capitalize((p.isTwin?'Twin ':'')+p.textFamilyRole+' '+anchor(p,p.nameFirst+(p.nameLast!=headSurname?' '+p.nameLast:''))+' '+p.textGenderAge+' '+p.textJobSummary) ).join('<br>');
+			let headSurname = household.head.text.nameLast;
+			s += m.map( p => String.capitalize((p.isTwin?'Twin ':'')+p.text.familyRole+' '+anchor(p,p.text.nameFirst+(p.text.nameLast!=headSurname?' '+p.text.nameLast:''))+' '+p.text.genderAge+' '+p.text.jobSummary) ).join('<br>');
 
 			finish(s);
 			guiMessage( 'viewShow', this.divId );

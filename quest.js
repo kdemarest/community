@@ -12,6 +12,7 @@ Quest.Validator = new class {
 				appliesTo: 1,
 				stateId: 1,
 				stateHash: 1,
+				topic: 1,
 			},
 			state: {
 				Mark: 1,
@@ -85,7 +86,7 @@ Quest.Base = class {
 		this.stateHash	= Object.assign({},Object.clone(questData.stateHash));
 
 		let castSetup = Object.assign( {}, Object.clone(questData.castSetup), castFill );
-		this.castHash = this.castResolve( giver, Object.assign({},castSetup,{giver:giver}) );
+		this.castHash = this.castDetermineMembers( giver, Object.assign({},castSetup,{giver:giver}) );
 		this.beenInState = {};
 		this.__player  = null;
 		this.__speaker = null;
@@ -100,7 +101,7 @@ Quest.Base = class {
 	//
 	// Cast
 	//
-	castResolve(giver,castSetup) {
+	castDetermineMembers(giver,castSetup) {
 		let castHash = {};
 		Object.each( castSetup, (valueOrFn,castId) => {
 			if( valueOrFn === null ) {
@@ -299,7 +300,7 @@ Quest.Data.Fetch = {
 		invite: {
 			giver: [
 				{	Q: 'I will get it, no problem',
-					A:	c=>'Great! Just go visit '+c.person.nameFull+' and get it.',
+					A:	c=>'Great! Just go visit '+c.person.text.nameFull+' and get it.',
 					onQ: 'start'
 				},
 				{	Q: 'Perhaps another time.',
@@ -309,8 +310,8 @@ Quest.Data.Fetch = {
 		},
 		start: {
 			Mark:		'person',
-			Journal:	c=>'Fetch '+c.item+' for '+c.me.nameFull+'.',
-			Stage:		c=>'Visit '+c.person.nameFull+'.',
+			Journal:	c=>'Fetch '+c.item+' for '+c.me.text.nameFull+'.',
+			Stage:		c=>'Visit '+c.person.text.nameFull+'.',
 			Advance:	c=>c.player.has(c.item),
 			onAdvance:	'gotIt',
 			giver: {
@@ -318,7 +319,7 @@ Quest.Data.Fetch = {
 			},
 			person: {
 				Ensure: c=>!c.person.has(c.item) ? c.person.inventory.add(c.item) : null,
-				Q:	c=>c.giver.nameFull+' would like some '+c.item+'.',
+				Q:	c=>c.giver.text.nameFull+' would like some '+c.item+'.',
 				A:	'Oh, yes I do. Here you go!',
 				Give: c=>c.player.inventory.add(c.item),	// comes with an automatic note tht you got it
 				onQ: 'gotIt'
@@ -326,7 +327,7 @@ Quest.Data.Fetch = {
 		},
 		gotIt: {
 			Mark:		'giver',
-			Stage:		c=>'Return to '+c.giver.nameFull+'.',
+			Stage:		c=>'Return to '+c.giver.text.nameFull+'.',
 			Revert:		c=>!c.player.has(c.item),
 			onRevert:	'start',
 			giver: {

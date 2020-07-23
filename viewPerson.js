@@ -17,17 +17,17 @@ View.Person = class extends View.Showable {
 				{ on: 'mouseover',	action: ()=>guiMessage('hoverPerson',person.isAlive?person:null) },
 				{ on: 'mouseout',	action: ()=>guiMessage('hoverPerson',null) }
 			]).convenient();
-			let s = '<div style="color:green;"><b>'+cap(person.nameFull)+', '+person.textSkillLevel+' '+person.textJob+'</b></div>';
-			s += person.age+' year old '+person.textInformalGender+'<br/>';
+			let s = '<div style="color:green;"><b>'+cap(person.text.nameFull)+', '+person.text.skillLevel+' '+person.text.job+'</b></div>';
+			s += person.age+' year old '+person.text.informalGender+'<br/>';
 			if( person.spouse ) {
-				s += cap(person.textMarriageRole)+' of '+anchor(person.spouse,person.spouse.nameFull)+'<br/>';
+				s += cap(person.text.marriageRole)+' of '+anchor(person.spouse,person.spouse.text.nameFull)+'<br/>';
 			}
 			let childList = person.childList.sort( (a,b) => Math.sign( b.respect-a.respect ) );
 			childList.forEach( child => {
-				s += (child.isTwin?'Twin ':'')+anchor(child,child.nameFirst)+', '+child.titleChild+' age '+child.age+'<br/>';
+				s += (child.isTwin?'Twin ':'')+anchor(child,child.text.nameFirst)+', '+child.text.titleChild+' age '+child.age+'<br/>';
 			});
 			if( person.mother && person.father ) {
-				s += cap(person.titleChild)+' of '+anchor(person.mother,person.mother.nameFirst)+' and '+anchor(person.father,person.father.nameFirst)+' '+person.father.surname+'<br/>';
+				s += cap(person.text.titleChild)+' of '+anchor(person.mother,person.mother.text.nameFirst)+' and '+anchor(person.father,person.father.text.nameFirst)+' '+person.father.text.surname+'<br/>';
 				if( person.mother.isDead && person.father.isDead ) {
 					s += "Both deceased.<br/>";
 				}

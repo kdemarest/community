@@ -145,13 +145,13 @@ function main() {
 	};
 	//nameParser.stats();
 
-	//let gnome = new Maker.gnome(repo);
-	//console.log( gnome.firstNamesJsonByGender );
+	let gnome = new Maker.gnome(repo);
+	console.log( gnome.firstNamesJsonByGender );
 	//console.log( gnome.nameLastList.length );
-	//console.log( gnome.lastNamesJson );
+	console.log( gnome.lastNamesJson );
 
-	let human = new Maker.human(repo);
-	console.log( human.firstNamesJsonByGender );
+	//let human = new Maker.human(repo);
+	//console.log( human.firstNamesJsonByGender );
 	//console.log( human.lastNamesJson );
 }
 

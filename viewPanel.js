@@ -125,7 +125,7 @@ View.City = class extends View.Panel {
 			return;
 		}
 		this.hovered = this.panel.visual[entity.id];
-		this.panel.data.setInfo(entity.textInfo);
+		this.panel.data.setInfo(entity.text.info);
 		this.hovered.isHovered = true;
 	}
 	message( msg, payload ) {
@@ -142,6 +142,14 @@ View.City = class extends View.Panel {
 		if( msg == 'showMark' ) {
 			this.panel.data.mark = payload;
 		}
+	}
+	tick(dt) {
+		super.tick(dt);
+		this.observer.journal.traverse( entry => {
+			if( entry.isSelected ) {
+				this.panel.data.mark = entry.mark;
+			}
+		});
 	}
 }
 

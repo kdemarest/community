@@ -20,6 +20,13 @@ View.Dialog = class extends View.Showable {
 				this.dialogClose();
 			}
 		});
+		//document.off('.viewDialog');
+		document.addEventListener('keypress',(event)=>{
+			debugger;
+		});
+		this.div.on('keypress','.viewDialog',(event)=>{
+			debugger;
+		});
 	}
 	dialogClose() {
 		this.dialog = null;
@@ -43,7 +50,7 @@ View.Dialog = class extends View.Showable {
 		s += '<table>';
 		s += '<tr>';
 		s += '<th><img src="icons/children.png"></th>';
-		s += '<th class="name">'+cap(person.nameFull)+'<p>'+speech.say+'</p></th>';
+		s += '<th class="name">'+cap(person.text.nameFull)+'<p>'+speech.say+'</p></th>';
 		s += '</tr>';
 		s += '<tr>';
 		s += '<td><h1>Topics</h1></td>';

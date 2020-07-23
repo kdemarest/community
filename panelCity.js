@@ -197,7 +197,7 @@ PanelCity.Elements = function(root) {
 				}
 				guiMessage( household ? 'showHousehold' : 'showVenue', household );
 			})
-			.on('mouseover',()=>data.setInfo(structure.textSummary+' in '+structure.district.id))
+			.on('mouseover',()=>data.setInfo(structure.text.summary+' in '+structure.district.id))
 			.on('mouseout',()=>data.setInfo(''))
 
 	});

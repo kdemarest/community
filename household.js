@@ -14,6 +14,7 @@ class Household extends StructureHolder {
 		this.uid = Date.makeUid();
 		this.icon = 'household.png';
 		this.type = ResidenceType;
+		this.text = new Household.Text(this);
 	}
 
 //-------------------------
@@ -34,9 +35,6 @@ class Household extends StructureHolder {
 		this.isParasite = true;	// I don't own my structure
 		venue._addHousehold(this);
 	}
-	get textSummary() {
-		return this.head.nameLast+' ('+this.bedCapacity+')';
-	}
 	set bedCount(value) {
 		console.assert(false);
 	}
@@ -56,7 +54,7 @@ class Household extends StructureHolder {
 	add(person) {
 		this.memberList.push(person);
 		person._household = this;
-		console.logHousehold('Add '+person.textSummary+' to household '+this.text);
+		console.logHousehold('Add '+person.text.summary+' to household '+this.text.text);
 	}
 	get head() {
 		if( this.memberList.length == 1 ) {
@@ -74,22 +72,34 @@ class Household extends StructureHolder {
 	get surname() {
 		return this.memberList.length ? this.memberList[0].surname : 'noNameYet';
 	}
-	get textTitle() {
-		if( this.head.isSingle && this.memberCount > 1 ) {
+}
+
+Household.Text = class {
+	constructor(household) {
+		this.household = household;
+	}
+	get surname() {
+		return this.household.surname;
+	}
+	get summary() {
+		return this.household.head.text.nameLast+' ('+this.household.bedCapacity+')';
+	}
+	get title() {
+		if( this.household.head.isSingle && this.household.memberCount > 1 ) {
 			return 'friends';
 		}
-		return this.head.nameFirst+' '+this.surname;
+		return this.household.head.text.nameFirst+' '+this.surname;
 	}
 	get text() {
 		let s = '';
-		s = this.textTitle+' home: '+Array.joinAnd( this.memberList.map( member => member.textSummary ) );
-		if( this.memberCount == 1 ) {
-			let head = this.head;
+		s = this.title+' home: '+Array.joinAnd( this.household.memberList.map( member => member.text.summary ) );
+		if( this.household.memberCount == 1 ) {
+			let head = this.household.head;
 			if( !head.spouse ) {
 				s += ' unmarried';
 			}
 			if( head.mother.isAlive || head.father.isAlive ) {
-				s += ' ('+head.titleChild+' of '+head.father.textSummary+' and '+head.mother.textSummary+')';
+				s += ' ('+head.text.titleChild+' of '+head.father.text.summary+' and '+head.mother.text.summary+')';
 			}
 		}
 		return s;

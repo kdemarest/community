@@ -594,7 +594,6 @@ let AspectTypeHash = {
 		}
 	},
 	family: {
-		isHidden: true,
 		percentOfPopulation: 0.25,
 		venueInitHash: {
 			family: {
@@ -619,7 +618,6 @@ let AspectTypeHash = {
 	},
 	indigent: {
 		icon: 'beggar.png',
-		isHidden: true,
 		percentOfPopulation: 0.05,
 		neverProductive: true,
 		venueInitHash: {
@@ -630,7 +628,7 @@ let AspectTypeHash = {
 					bum: {
 						icon: { img: 'person.png', holding: 'beggar.png' },
 						wealth: 'low',
-						isBum: true,
+						isIndigent: true,
 					}
 				}
 			}

@@ -51,6 +51,7 @@ class Venue extends StructureHolder {
 		this.workerHash	= new HashManager();
 		this.district	= null;
 		this.householdList	= [];
+		this.text		= new Venue.Text(this);
 	}
 //-------------------------
 	get preferredDistrictId() {
@@ -64,23 +65,8 @@ class Venue extends StructureHolder {
 	}
 //-------------------------
 
-	get name() {
-		let sizeName = ['small','medium','large','huge'][Math.min(3,Math.floor(Math.sqrt(1+this.workerCapacity))-1)];
-		return sizeName+' '+this.type.id;
-	}
-	get text() {
-		return this.name+' is '+Math.percent(this.percentWorkerCapacity)+'% worked by '+Array.joinAnd(this.workerNameArray)
-	}
-	get textSummary() {
-		return this.name+' ('+this.workerCapacity+') makes '+this.type.produces.id;
-	}
 	get isOperational() {
 		return !this.structure.needsRepair;
-	}
-	get workerNameArray() {
-		let nameList = [];
-		this.workerHash.traverse( worker=>nameList.push(worker.name+' the '+worker.jobType.name) );
-		return nameList;
 	}
 	get workerArray() {
 		return Object.values(this.workerHash.hash);
@@ -114,6 +100,30 @@ class Venue extends StructureHolder {
 
 		console.assert(gatherFn);
 		gatherFn( this.type.produces.id, this.directProduction );
+	}
+
+}
+
+Venue.Text = class {
+	constructor(venue) {
+		this.venue = venue;
+	}
+	get name() {
+		let sizeName = ['small','medium','large','huge'][Math.min(3,Math.floor(Math.sqrt(1+this.venue.workerCapacity))-1)];
+		return sizeName+' '+this.venue.type.id;
+	}
+	get text() {
+		return this.name+' is '+Math.percent(this.venue.percentWorkerCapacity)+'% worked by '+Array.joinAnd(this.workerNameArray)
+	}
+	get workerNameArray() {
+		let nameList = [];
+		this.venue.workerHash.traverse( worker => 
+			nameList.push(worker.text.name+' the '+worker.text.job)
+		);
+		return nameList;
+	}
+	get summary() {
+		return this.name+' ('+this.venue.workerCapacity+') makes '+this.venue.type.produces.id;
 	}
 
 }

@@ -9,8 +9,12 @@ class Journal extends HashManager {
 			text: text,
 			status: '',
 			mark: null,
-			stageHash: {}
+			stageHash: {},
+			isSelected: true
 		});
+	}
+	stageTraverse(id,fn) {
+		return Object.each( this.get(id).stageHash, fn );
 	}
 	stageAdd(id,stageId,text) {
 		let stageHash = this.get(id).stageHash;
@@ -18,8 +22,9 @@ class Journal extends HashManager {
 			return;
 		}
 		stageHash[stageId] = {
-			text: text,
-			done: false
+			id:		stageId,
+			text:	text,
+			done:	false
 		}
 		return stageHash[stageId];
 	}

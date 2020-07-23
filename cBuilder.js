@@ -224,7 +224,7 @@ class CommunityBuilder {
 		let workforceMax	= Math.clamp( Math.floor( workforceRatio*sketch.workersTotal ), 1, venueType.workforceMax || 999 );
 		let workerCapacity	= venueType.alwaysMaxWorkforce ? workforceMax : Math.randInt( 1, workforceMax );
 		let venue = new Venue( venueType, workerCapacity );
-		//console.log('Picked '+venue.text);
+		//console.log('Picked '+venue.text.text);
 		return venue;
 	}
 

@@ -23,13 +23,13 @@ Dialog.Manager = class {
 
 		speech.say = this.lastSay || '';
 
-		if( !this.questId ) {
-			Object.each( this.questHash, (quest,questId) => {
+		Object.each( this.questHash, (quest,questId) => {
+			if( !this.questId || this.questId == questId ) {
 				quest.getDialogEntries( this.observer, this.speaker, reply => {
 					speech.replyList.push( reply );
 				});
-			});
-		}
+			}
+		});
 
 		return speech;
 	}
@@ -47,13 +47,13 @@ Quest.Data.aboutMe = {
 		main: {
 			giver: [
 				{	Q: 'What is your name?',
-					A: c=>`My name is ${c.me.nameFull}.`
+					A: c=>`My name is ${c.me.text.nameFull}.`
 				},
 				{	Q: 'How old are you?',
 					A: c=>`I am ${c.me.age} years old.`
 				},
 				{	Q: 'What do you do for a living?',
-					A: c=>`Since I was young I trained as a ${c.me.textJob}.`,
+					A: c=>`Since I was young I trained as a ${c.me.text.job}.`,
 					onQ: 'job'
 				}
 			]
@@ -61,18 +61,32 @@ Quest.Data.aboutMe = {
 		job: {
 			giver: [
 				{	Q: 'Are you good at it?',
-					A: c=>`Some call me ${c.me.textSkillLevel} at what I do.`
+					A: c=>`Some call me ${c.me.text.skillLevel} at what I do.`
 				},
 				{	Q: 'Do you enjoy the work?',
 					A: 'It is all I have ever known.'
 				},
-				{	Q: me=>'How long have you been a '+me.textJob+'?',
-					A: me=>`Ever since I was ${me.textBoyGirl}`
+				{	Q: c=>'How long have you been a '+c.me.text.job+'?',
+					A: c=>`Ever since I was ${c.me.text.boyGirl}`
 				},
-				{	Q: me=>'Lets talk about something else.',
+				{	Q: c=>'Lets talk about something else.',
 					onQ: 'giver'
 				}
 			]
+		}
+	}
+}
+
+Quest.Data.aboutJob = {
+	appliesTo: person => person.jobType && !person.isIndigent && !person.isMinor,
+	stateId: 'main',
+	topic: 'job',
+	stateHash: {
+		main: {
+			giver: {
+				Q: 'Tell me about your job.',
+				A: c=> 'I am a '+c.me.text.job
+			}
 		}
 	}
 }

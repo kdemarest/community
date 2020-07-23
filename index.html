@@ -107,8 +107,8 @@ function main() {
 
 	console.logInception( community.venueList.map( obj => obj.text ).join('\n') );
 	console.log( community.personList.map( obj => obj.text ).join('\n') );
-	console.logInception( community.householdList.map( obj => obj.text ).join('\n') );
-	console.logInception( community.personList.map( person => person.textLineage ).join('\n') );
+	console.logInception( community.householdList.map( obj => obj.text.text ).join('\n') );
+	console.logInception( community.personList.map( person => person.text.lineage ).join('\n') );
 	console.logInception( "Population="+community.population+" and "+community.ancestorList.length+" dead" );
 
 	community.dataFeed = {};
