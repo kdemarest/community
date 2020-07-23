@@ -315,7 +315,7 @@ Quest.Data.Fetch = {
 			Advance:	c=>c.player.has(c.item),
 			onAdvance:	'gotIt',
 			giver: {
-				Prompt:	c=>'Do you have that '+c.item+' for me yet?',
+				Prompt:	c=>'Do you have that '+c.item+' from '+c.person.text.nameFull+' yet?',
 			},
 			person: {
 				Ensure: c=>!c.person.has(c.item) ? c.person.inventory.add(c.item) : null,

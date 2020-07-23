@@ -71,13 +71,17 @@ div {
 }
 
 #viewDialog th.name {
-	width: 80%;
-	font-size: 0.7em;
-	color: grey;
+	color: red;
 	vertical-align: top;
 	text-align: left;
 }
+#viewDialog th.name h1 {
+	width: 80%;
+	font-size: 0.7em;
+	color: grey;
+}
 #viewDialog p {
+	color: white;
 	font-size: 1.5em;
 	margin-top: 0.5em;
 	margin-bottom: 1em;
