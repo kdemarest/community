@@ -12,6 +12,7 @@ class Journal extends HashManager {
 			stageHash: {},
 			isSelected: true
 		});
+		return entry;
 	}
 	stageTraverse(id,fn) {
 		return Object.each( this.get(id).stageHash, fn );
@@ -37,23 +38,25 @@ class Journal extends HashManager {
 			stageHash[stageId].done = isDone;
 		}
 	}
-	mark(id,thing) {
-		this.get(id).mark = thing;
+	mark(id,thingId) {
+		this.get(id).mark = thingId;
 	}
 	setStatus(id,status) {
 		console.assert( !this.get(id).status );
 		this.get(id).status = status;
 	}
-	fail(id) {
+	setFailed(id) {
 		this.setStatus(id,'failed');
 	}
-	complete(id) {
+	setComplete(id) {
 		this.setStatus(id,'complete');
 	}
 	isComplete(id) {
 		return this.get(id) && this.get(id).status == 'complete';
 	}
 }
+
+Journal.Data = {};
 
 return {
 	Journal: Journal

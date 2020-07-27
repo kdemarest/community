@@ -225,6 +225,11 @@ Module.add('utilities',function(){
 	// OBJECT
 	//
 
+	Object.assignIds = function(obj) {
+		Object.each( obj, (value,key)=>value.id=key );
+	}
+
+
 	Object.isObject = function(obj) {
 		return typeof obj=='object' && obj !== null && !Array.isArray(obj);
 	}
@@ -511,7 +516,7 @@ ARRAY FORM
 	}
 
 	String.isLowercase = function(s) {
-		return s == s.toLowerCase();
+		return s == s.toLowerCase() && s != s.toUpperCase();
 	}
 
 	String.startsWith = function(str,s) {
@@ -772,6 +777,9 @@ Module.add('utilities2',function() {
 			}
 			this.list.push( element );
 			return element;
+		}
+		push( element ) {
+			return this.add(element);
 		}
 		duplicate() {
 			let m = new ListManager( this.list.slice(), this.validatorFn );

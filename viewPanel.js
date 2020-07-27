@@ -53,7 +53,6 @@ View.Panel = class extends View.Showable {
 	}
 	tick(dt) {
 this.dirty = true;
-
 		this.panel.tick(dt);
 	}
 	render() {

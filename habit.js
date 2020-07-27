@@ -221,6 +221,9 @@ Habit.Manager = class {
 	}
 
 	get destination() {
+		if( this.person.destination ) {
+			return this.person.destination;
+		}
 		// give 10 minutes to get to your next location.
 		let hour = this.clock.aheadMinutes(15).hour;
 		return this.locationAt(hour);

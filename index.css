@@ -49,6 +49,7 @@ div {
 
 #viewDialog {
 	position: absolute;
+	border: 1px solid red;
 	z-index: 10;
 	width: 80%;
     height: 80%;
@@ -65,49 +66,44 @@ div {
 }
 #viewDialog table {
 	width: 100%;
+	border: 1px solid green;
+	color: #ddd;
+}
+#viewDialog table th, #viewDialog table td {
+	vertical-align: top;
+	text-align: left;
 }
 #viewDialog table td img {
 	width: 20%;
 }
-
-#viewDialog th.name {
-	color: red;
-	vertical-align: top;
-	text-align: left;
+#viewDialog table tbody tr th.portrait {
 }
-#viewDialog th.name h1 {
+#viewDialog table tbody tr th.heading h1 {
 	width: 80%;
 	font-size: 0.7em;
-	color: grey;
 }
-#viewDialog p {
+#viewDialog table tbody tr th.heading p {
 	color: white;
 	font-size: 1.5em;
 	margin-top: 0.5em;
 	margin-bottom: 1em;
 }
-#viewDialog li {
-	font-size: 1.0em;
-}
-
-#viewDialog li a {
-	color: #aaa;
-}
-
-#viewDialog li a:hover {
-	color: #ddd;
-}
-
-#viewDialog li.said a {
-	color: #444;
-}
-
-#viewDialog .topics {
-	width: 40%;
+#viewDialog table tbody tr td.topic {
+	font-size: 0.7em;
+	width: 30%;
 	height: 20%;
-	float: right;
 }
 
+#viewDialog table tbody tr td.choice li a {
+}
+
+#viewDialog table tbody tr td.choice li a:hover {
+	color: #eee;
+}
+
+#viewDialog table tbody tr td.choice li.said {
+	color: #777;
+}
 
 div.iconButton {
 }
@@ -208,7 +204,7 @@ div.midview {
 }
 
 a {
-	color: #aae;
+	color: #aaa;
 	cursor: pointer;
 	border: 1px solid rgba(0,0,0,0);
 }

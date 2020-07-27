@@ -19,13 +19,14 @@
 <script src="dataNames.js" charset="utf-8"></script>
 <script src="dataCulture.js" charset="utf-8"></script>
 <script src="dataAspect.js" charset="utf-8"></script>
+<script src="journal.js" charset="utf-8"></script>
 <script src="quest.js" charset="utf-8"></script>
 <script src="dialog.js" charset="utf-8"></script>
-<script src="journal.js" charset="utf-8"></script>
 
 <script src="cLayout.js" charset="utf-8"></script>
 <script src="cBuilder.js" charset="utf-8"></script>
 
+<script src="stats.js" charset="utf-8"></script>
 <script src="person.js" charset="utf-8"></script>
 <script src="habit.js" charset="utf-8"></script>
 <script src="venue.js" charset="utf-8"></script>
@@ -92,16 +93,105 @@ Aspect.Situation = class {
 	}
 }
 
+class World {
+	constructor() {
+		this.itemList = new ListManager([]);
+		this.siteList = new ListManager([]);
+		this.community = null;
+	}
+	get personList() {
+		return this.community.personList;
+	}
+	find(id) {
+		let entity = null;
+		entity = entity || this.personList.find( site=>site.id==id );
+		entity = entity || this.siteList.find( site=>site.id==id );
+		entity = entity || this.itemList.find( item=>item.id==id );
+		return entity;
+	}
+}
+
+class Site {
+	constructor(id,circle) {
+		this.id = id;
+		this.circle = circle;
+	}
+}
+
+class Item {
+	constructor(id,circle) {
+		this.id = id;
+		this.circle = circle;
+		this.state = 'open';
+	}
+}
+
+function hardcodeTestPeople(world) {
+	function assignPerson(id,criteriaFn) {
+		let person = world.community.personList.find( person => {
+			return !person.hardcoded && person.venue && person.isAlive && criteriaFn(person);
+		});
+		console.assert(person);
+		person.hardcoded = true;
+		person.id = id;
+		person.nameFirst = String.capitalize(id);
+		return person;
+	}
+
+	function within(id,venue) {
+		let d = venue.circle;
+		let pos = {x:0,y:0};
+		[pos.x,pos.y] = Distance.clockPick(d.x,d.y,d.radius);
+		return new Circle( id, pos.x, pos.y, d.radius*0.3 )
+	}
+
+	function makeSite(id,venue) {
+		let site = new Site( id, within(id,venue) );
+		world.siteList.push( site );
+		return site;
+	}
+
+	function makeItem(id,venue) {
+		let item = new Item( id, within(id,venue) );
+		world.itemList.push( item );
+		return item;
+	}
+
+	let brynjolf  = assignPerson( 'brynjolf',  person=>person.isMale && person.age>=18 );
+	let madesi    = assignPerson( 'madesi',    person=>person.isMale && person.age>=18 );
+	let brandShei = assignPerson( 'brandShei', person=>person.isMale && person.age>=18 );
+	let esbern    = assignPerson( 'esbern',    person=>person.isMale && person.age>=18 );
+	let delphine  = assignPerson( 'delphine',  person=>person.isFemale && person.age>=18 );
+
+	let delphinesRoom = makeSite( 'delphinesRoom', delphine.venue );
+	makeSite( 'bedroomSleepingGiantInn', delphine.venue );
+	makeItem( 'hornOfJurgen', brandShei.venue );
+	makeItem( 'delphinesRoomDoor', delphinesRoom );
+	makeItem( 'delphineWardrobe', delphinesRoom );
+	makeSite( 'bladesHiddenRoom', delphinesRoom );
+
+	makeSite( 'brynjolfStall', madesi.venue );
+	makeSite( 'madesiStall', madesi.venue );
+	let mStall = makeSite( 'mStall', madesi.venue );
+	makeItem( 'madesiRing', mStall );
+}
 
 
 function main() {
-	let population = 10;
+	let population = 30;
 
 	let clock = new Time.Clock(1.0);
 
+	//Quest.Validate();
+	Object.assignIds( Quest.Data );
+	Object.assignIds( Journal.Data );
+
+	let world = new World();
 
 	let community = new Community( new CultureBase(Name.humanFirst,Name.humanLast) );
 	community.clock = clock;
+	community.world = world;
+	world.community = community;
 
 	community.communityBuilder.build(population);
 
@@ -138,10 +228,19 @@ function main() {
 		this.add('journal',		new View.Journal(		'viewJournal' ) );
 	}
 
+	hardcodeTestPeople(world);
+
 	let observer = {
+		world: world,
 		community: community,
-		journal: new Journal()
+		journal: new Journal(),
+		dialog: null
 	};
+
+	let scriptManager = new Script.Manager( new Script.Validator(world) );
+	scriptManager.setObserver(observer);
+	scriptManager.scanDefinitions( Quest.Data );
+	scriptManager.scanEntries();
 
 	let gui = Gui.createManager( ()=>{} );
 	gui.create( viewMakerFn );
@@ -184,6 +283,7 @@ function main() {
 	Time.animationFrameTicker( dt => {
 		hackTick(dt);
 		clock.tick(dt);
+		scriptManager.tick(dt);
 		community.tick(dt);
 		gui.tick(dt);
 		gui.render(dt);

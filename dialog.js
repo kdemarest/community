@@ -11,37 +11,49 @@ Dialog.Manager = class {
 	constructor(observer,speaker) {
 		this.observer  = observer;
 		this.speaker   = speaker;
-		this.questHash = speaker.questHashFn();
+		this.questHash = Quest.Determine(speaker);
 		this.questId   = null;
+		this.reset();
 	}
-	get speech() {
-		let speech = {
-			say: null,
-			replyList: [],
-			topicList: [],
-		};
+	reset() {
+		this.say = null;
+		this.replyList = [];
+		this.topicList = [];
+	}
 
-		speech.say = this.lastSay || '';
+	getSpeech() {
+		return this;
+	}
 
-		Object.each( this.questHash, (quest,questId) => {
-			if( !this.questId || this.questId == questId ) {
-				quest.getDialogEntries( this.observer, this.speaker, reply => {
-					speech.replyList.push( reply );
-				});
-			}
+	addSay(processId,text) {
+		this.say = text;
+	}
+
+	addReply(processId,text) {
+		this.replyList.push({
+			processId: processId,
+			text: text
 		});
-
-		return speech;
 	}
+
+	get hasSay() {
+		return !!this.say;
+	}
+
+	get hasReplies() {
+		return this.replyList.length > 0;
+	}
+
 	select(reply) {
+		this.questId = reply.quest.id;
 		reply.quest.select(reply);
 		this.lastSay = reply.say || this.lastSay;
 	}
 };
 
-
+/*
 Quest.Data.aboutMe = {
-	appliesTo: person=>true,
+	mayGive: person=>true,
 	stateId: 'main',
 	stateHash: {
 		main: {
@@ -70,7 +82,7 @@ Quest.Data.aboutMe = {
 					A: c=>`Ever since I was ${c.me.text.boyGirl}`
 				},
 				{	Q: c=>'Lets talk about something else.',
-					onQ: 'giver'
+					onQ: 'main'
 				}
 			]
 		}
@@ -78,7 +90,7 @@ Quest.Data.aboutMe = {
 }
 
 Quest.Data.aboutJob = {
-	appliesTo: person => person.jobType && !person.isIndigent && !person.isMinor,
+	mayGive: person => person.jobType && !person.isIndigent && !person.isMinor,
 	stateId: 'main',
 	topic: 'job',
 	stateHash: {
@@ -90,10 +102,11 @@ Quest.Data.aboutJob = {
 		}
 	}
 }
+*/
 
 /*
 ThreadType.gameGreeter = {
-	appliesTo: person=>true,
+	mayGive: person=>true,
 	phraseHash: {
 		top: {
 			player: 'c1/To dust we ever shall return. Even the mighty may not withstand time.',
@@ -114,7 +127,7 @@ ThreadType.gameGreeter = {
 
 ThreadType.dwarvenKnowledge = {
 	topic: 'dwarves',
-	appliesTo: person=>person.isDwarf,
+	mayGive: person=>person.isDwarf,
 	phraseHash: {
 		top: {
 			say: 'What would you like to know about dwarves?',

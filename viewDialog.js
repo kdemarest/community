@@ -4,15 +4,16 @@ View.Dialog = class extends View.Showable {
 	constructor(divId) {
 		super(divId);
 		this.person = null;
-		this.dialog = null;
 		this.replyCount = 0;
+	}
+	get dialog() {
+		return this.observer.dialog;
 	}
 	setVisible(value) {
 		this.div.style.display = value ? 'block' : 'none';
 	}
 	dialogOpen(person) {
 		this.person = person;
-		this.dialog = new Dialog.Manager(this.observer,person);
 
 		this.div.off('.viewDialog');
 		this.div.on('click','.viewDialog',()=>{
@@ -28,7 +29,6 @@ View.Dialog = class extends View.Showable {
 		});
 	}
 	dialogClose() {
-		this.dialog = null;
 		this.setVisible(false);
 	}
 	draw() {
@@ -36,24 +36,24 @@ View.Dialog = class extends View.Showable {
 		let cap = String.capitalize;
 
 		let [anchor,finish] = new Markup( this.div, reply=>[
-			{ on: 'click',		action: (event) => {
+			{ on: 'click', action: (event) => {
 				this.dialog.select(reply);
 				this.draw();
 				event.stopPropagation();
 			}},
 		]).convenient();
 
-		let speech = this.dialog.speech;
+		let speech = this.dialog.getSpeech();
 
 		let s = '';
 		s += '<table>';
 		s += '<tr>';
-		s += '<th><img src="icons/children.png"></th>';
-		s += '<th class="name"><h1>'+cap(person.text.nameFull)+'</h1><p>'+speech.say+'</p></th>';
+		s += '<th class="portrait"><img src="icons/children.png"></th>';
+		s += '<th class="heading"><h1>'+cap(person.text.nameFull)+'</h1><p>'+speech.say+'</p></th>';
 		s += '</tr>';
 		s += '<tr>';
-		s += '<td><h1>Topics</h1></td>';
-		s += '<td>';
+		s += '<td class="topic"><h1>Topics</h1></td>';
+		s += '<td class="choice">';
 		s += '<ul>';
 		this.replyCount = 0;
 		speech.replyList.forEach( reply => {
@@ -71,6 +71,7 @@ View.Dialog = class extends View.Showable {
 		super.message(...arguments);
 		if( msg == 'talkPerson' ) {
 			let person = payload;
+			this.observer.dialog = new Dialog.Manager(this.observer,person);
 			this.dialogOpen(person);
 			this.setVisible(true);
 			this.draw();
