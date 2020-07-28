@@ -104,7 +104,8 @@ PanelCity.Visuals = function (root) {
 		let icon	= person.icon;
 		console.assert(icon);
 		let holding	= person.iconHolding;
-		visuals[person.id] = [ new Visual.Circle('blue','black'), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
+		let colorFill = person.hardcoded ? 'red' : 'black';
+		visuals[person.id] = [ new Visual.Circle('blue',colorFill), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
 		visuals[person.id+'Main'] = [ new Visual.Sprite(holding||icon), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
 //		if( holding ) {
 //			visuals[person.id+'Held'] = [ new Visual.Sprite(holding), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];

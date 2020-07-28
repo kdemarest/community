@@ -450,7 +450,7 @@ Journal.Data.aBladeInTheDark = {
 Quest.Data.tavernKeeper = {
 	mayGive: 'delphine',
 	cast: {
-		giver: 'delphine',
+		giver: null,
 	},
 	priority: 'normal',
 	stateHash: {
@@ -681,7 +681,7 @@ Each event keeps its own state.
 Quest.Data.aChanceArrangement = {
 	mayGive: entity=>entity.id == "brynjolf",
 	cast: {
-		giver:		'brynjolf',
+		brynjolf:	'brynjolf',
 		bStall:		'brynjolfStall',
 		madesi:		'madesi',
 		mStall:		'madesiStall',
@@ -696,17 +696,18 @@ Quest.Data.aChanceArrangement = {
 		haveGold:		c => c.player.gold >= 500,
 		killedGuard:	c => c.quest.riftenGate.killedGuard,
 		scamTime:		c => c.time >= 8 && c.time <= 12+8,
-		stoleRing:		{ query: 'player', has: 'ring' },
-		plantedRing:	{ query: 'brandShei', has: 'ring' },
+		stoleRing:		[{ query: 'player', has: 'ring' }],
+		plantedRing:	[{ query: 'brandShei', has: 'ring' }],
+		atStallDaytime:	[
+			{ query: 'scamTime' },
+			{ query: 'brynjolf', isAt: 'bStall' },
+			{ query: 'player', isAt: 'bStall' },
+		],
 	},
 	stateHash: {
 		BEGIN: [
 			{ onTick: 'brynjolf', do: [
-				{ await: [
-					{ query: 'scamTime', is: true },
-					{ query: 'player', isAt: 'bStall' },
-					{ query: 'brynjolf', isAt: 'bStall' }
-				]},
+				{ await: 'atStallDaytime' },
 				{ change: 'brynjolf', talkTo: 'player' }
 			]},
 			{ onEscape: 'brynjolf', do: [
@@ -784,15 +785,8 @@ Quest.Data.aChanceArrangement = {
 				{ when: 'scamTime' },
 				{ change: 'brynjolf', travelTo: 'bStall' },
 			]},
-			{ label: 'scamReady', do: [
-				{ await: [
-					{ query: 'scamTime' },
-					{ query: 'brynjolf', isAt: 'bStall' },
-					{ query: 'player', isAt: 'bStall' }
-				]},
-			]},
 			{ onTick: 'brynjolf', do: [
-				{ run: 'scamReady' },
+				{ await: 'atStallDaytime' },
 				{ pick: [
 					{ me: "I'm ready when you are. Just give the word." },
 					{ me: "OK. Ready to make some coin?" }
@@ -868,7 +862,7 @@ Script.Command = new function() {
 		isDefinition:   { is: 'DEF',   checker: 'command' },
 		isStateHash:    { is: 'STATE', checker: 'hash', memberType: ['isStateDef'] },
 		isCastHash:     { is: 'CAST',  checker: 'hash', memberType: ['isCastDef'] },
-		isFlagHash:     { is: 'CAST',  checker: 'hash', memberType: ['isFlagDef'] },
+		isFlagHash:     { is: 'CAST',  checker: 'hash', memberType: ['isConditional','isFunction'] },
 		isCommandArray: { is: 'CMD',   checker: 'commandList' },
 		isConditional:  { is: 'CONDITIONAL', checker: 'commandList' },
 		isPick:         { is: 'PICK',  checker: 'commandList' },
@@ -968,7 +962,7 @@ Script.Command = new function() {
 		if: {
 			allow: ['STATE','CMD'],
 			param: {
-				if:			['isConditional'],
+				if:			['isConditional','isFlagId'],
 				do:			['isCommandArray'],
 				else:		['isCommandArray','undefined'],
 			},
@@ -1010,7 +1004,7 @@ Script.Command = new function() {
 		await: {
 			allow: ['CMD'],
 			param: {
-				await:		['isCommandArray'],
+				await:		['isConditional','isFlagId'],
 			},
 			cmdId:		'cmdAwait',
 		},
@@ -1038,8 +1032,9 @@ Script.Command = new function() {
 		query: {
 			allow: ['CONDITIONAL'],
 			param: {
-				isAt:		['isEntityId','undefined'],
-				has:		['isEntityId','undefined'],
+				query:		['isCastId','isFlagId'],
+				isAt:		['isCastId','undefined'],
+				has:		['isCastId','undefined'],
 				hasState:	['isString','undefined']
 			},
 			cmdId:		'cmdQuery',
@@ -1067,8 +1062,6 @@ Script.Validator = class {
 	reset() {
 		this.cast = null;
 		this.flag = null;
-		this.scriptId = null;
-		this.stateId  = null;
 		this.code = null;
 		this.ip = null;
 
@@ -1076,13 +1069,13 @@ Script.Validator = class {
 	}
 	assert(value,text) {
 		if( !value ) {
-			throw this.error = this.error || text+' in '+this.scriptId+' line '+this.ip;
+			throw text+' in '+this.trail.join('.');
 		}
 		return true;
 	}
 	test(value,text) {
 		if( !value ) {
-			this.error = this.error || text+' in '+this.scriptId+' line '+this.ip;
+			this.error = this.error || text+' in '+this.trail.join('.');
 			return false;
 		}
 		return true;
@@ -1100,15 +1093,15 @@ Script.Validator = class {
 			case 'isStateDef':
 				return this.test( Array.isArray(value), 'state def "'+trail+'" must be a command list' );
 			case 'isCastDef':
-				return this.test( value=='giver' || this.world.find(value), 'cast def "'+trail+':'+value+'" must be an entity id' );
-			case 'isFlagDef':
-				return this.test( true, 'flags can be nearly anything' );
+				return this.test( value===null || this.world.find(value), 'cast def "'+trail+':'+value+'" must be an entity id' );
 			case 'isCastId':
-				return this.test( this.cast[value] !== undefined, 'cast reference bad '+value );
+				return this.test( this.cast[value] !== undefined, 'cast "'+value+'" not found' );
+			case 'isFlagId':
+				return this.test( this.flag[value] !== undefined, 'flag "'+value+'" not found' );
 			case 'isEntityId':
-				return this.test( this.world.find(value), 'entity reference bad '+value );
+				return this.test( this.world.find(value), 'entity "'+value+'" not found' );
 			case 'isState':
-				return this.test( this.statesHash[value] === undefined, 'state reference bad '+value );
+				return this.test( this.statesHash[value] === undefined, 'state "'+value+'" not found' );
 			case 'isLabel':
 				let found = false;
 				for( let stateId in this.stateHash ) {
@@ -1162,29 +1155,17 @@ Script.Validator = class {
 			this.assert( spec.param[paramId], "Command "+spec.id+" does not support key "+paramId );
 		}
 
-		let more = [];
-		for( let paramId in spec.param ) {
-			let value    = cmd[paramId];
-			let typeList = spec.param[paramId];
-			this.error   = null;
-			let ok = this.validateParam( typeList, paramId, value, typeId=>{
-				if( Script.Command.typeDetails[typeId] ) {
-					more.push( typeId, value );
-				}
-			});
-			if( !ok ) {
-				this.assert( false, this.error );
-			}
-		}
-		this.validateCode(more);
+		this.validateHash( allowId, spec.param, paramId=>cmd[paramId], paramId=>spec.param[paramId] );
 	}
-	validateHash(allowId,hash,memberType) {
+	validateHash(allowId,hash,valueFn,typeListFn) {
 		let more = [];
 		for( let key in hash ) {
+			let value    = valueFn(key);
+			let typeList = typeListFn(key);
 			this.error   = null;
-			let ok = this.validateParam( memberType, key, hash[key], typeId=>{
+			let ok = this.validateParam( typeList, key, value, typeId=>{
 				if( Script.Command.typeDetails[typeId] ) {
-					more.push( typeId, value );
+					more.push( typeId, value, key );
 				}
 			});
 			if( !ok ) {
@@ -1203,29 +1184,35 @@ Script.Validator = class {
 		while( more.length ) {
 			let codeType = Script.Command.typeDetails[more.shift()];
 			let value    = more.shift();
+			let trail    = more.shift();
+
+			this.trail.push( trail );
 
 			if( codeType.checker == 'command' ) {
 				this.validateCommand( codeType.is, value );
 			}
 			if( codeType.checker == 'hash' ) {
-				this.validateHash( codeType.is, value, codeType.memberType );
+				this.validateHash( codeType.is, value, key=>value[key], key=>codeType.memberType );
 			}
 			if( codeType.checker == 'commandList' ) {
-				this.valicateCommandList( codeType.is, value );
+				this.validateCommandList( codeType.is, value );
 			}
+			this.trail.pop( trail );
 		}
 	}
 	validate(definition) {
 		this.definition = definition;
-		this.scriptId = definition.id;
 		this.cast = definition.cast || {};
 		this.flag = definition.flag || {};
 		this.stateHash = definition.stateHash || {};
 		this.ip = [0];
+		this.trail = [];
+		this.error = null;
 
 		this.validateCode([
 			'isDefinition',
-			definition
+			definition,
+			definition.id
 		]);
 	}
 }
@@ -1447,6 +1434,11 @@ Script.Manager = class {
 		});
 	}
 	scanDefinitions(definitionHash) {
+		Object.each( definitionHash, (definition) => {
+			definition.cast = definition.cast || {};
+			definition.flag = definition.flag || {};
+			definition.cast.player = 'player';
+		});
 		Object.each( definitionHash, (definition) => {
 			this.validator.validate(definition);
 		});

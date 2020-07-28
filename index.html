@@ -104,6 +104,9 @@ class World {
 	}
 	find(id) {
 		let entity = null;
+		if( id === 'player' ) {
+			return true;
+		}
 		entity = entity || this.personList.find( site=>site.id==id );
 		entity = entity || this.siteList.find( site=>site.id==id );
 		entity = entity || this.itemList.find( item=>item.id==id );
