@@ -198,12 +198,17 @@ Visual.Sprite = class extends Visual {
 		if( !ImgCache[url] ) {
 			ImgCache[url] = new Image();
 			ImgCache[url].src = url;
-			ImgCache[url].onload = () => ImgCache[url].loaded = true;
+			ImgCache[url].onload = () => {
+				ImgCache[url].loaded = true;
+			}
 		}
 		this._image = ImgCache[url];
 	}
 	get image() {
 		return this._image;
+	}
+	get loaded() {
+		return this._image ? this._image.loaded : false;
 	}
 	get naturalWidth() {
 		return this.loaded ? this.image.naturalWidth : 1.0;
@@ -212,17 +217,17 @@ Visual.Sprite = class extends Visual {
 		return this.loaded ? this.image.naturalHeight : 1.0;
 	}
 	get width() {
-		return this.naturalWidth*(this.xScale ? this.xScale : this.scale);
+		return /*this.naturalWidth*/1*(this.xScale ? this.xScale : this.scale);
 	}
 	get height() {
-		return this.naturalHeight*(this.yScale ? this.yScale : this.scale);
+		return /*this.naturalHeight*/1*(this.yScale ? this.yScale : this.scale);
 	}
 	scaleToWidth(w) {
-		this.scale = w / this.naturalWidth;
+		this.scale = w / /*this.naturalWidth*/1;
 	}
 	scaleToHeight(h) {
 		if( this.image.loaded ) {
-			this.scale = h / this.naturalHeight;
+			this.scale = h / /*this.naturalHeight*/1;
 		}
 	}
 	render() {

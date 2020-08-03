@@ -38,8 +38,8 @@ class Journal extends HashManager {
 			stageHash[stageId].done = isDone;
 		}
 	}
-	mark(id,thingId) {
-		this.get(id).mark = thingId;
+	mark(id,entity) {
+		this.get(id).mark = entity;
 	}
 	setStatus(id,status) {
 		console.assert( !this.get(id).status );

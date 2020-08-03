@@ -139,6 +139,7 @@ View.City = class extends View.Panel {
 			this.hover(payload);
 		}
 		if( msg == 'showMark' ) {
+			console.assert( Object.isObject(payload) && payload.circle );
 			this.panel.data.mark = payload;
 		}
 	}
@@ -146,6 +147,7 @@ View.City = class extends View.Panel {
 		super.tick(dt);
 		this.observer.journal.traverse( entry => {
 			if( entry.isSelected ) {
+				console.assert( Object.isObject(entry.mark) && entry.mark.circle );
 				this.panel.data.mark = entry.mark;
 			}
 		});

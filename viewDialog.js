@@ -30,6 +30,7 @@ View.Dialog = class extends View.Showable {
 	}
 	dialogClose() {
 		this.setVisible(false);
+		this.observer.dialog = null;
 	}
 	draw() {
 		let person = this.person;

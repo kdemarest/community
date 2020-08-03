@@ -36,6 +36,20 @@ let AspectTypeHash = {
 	},
 	arms: {
 	},
+	adventure: {
+		venueInitHash: {
+			adventureVenue: {
+				isFakeVenue: true,
+				jobInitHash: {
+					adventurer: {
+						icon: { img: 'adventurer.png' },
+						isAdventurer: true,
+						wealth: null
+					}
+				}
+			}
+		}
+	},
 	food: {
 		icon: 'food.png',
 		percentOfPopulation: 0.20,

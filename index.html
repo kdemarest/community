@@ -59,6 +59,7 @@ window.Debug = DebugSetup({
 	inception: false,
 	production: true,
 	household: false,
+	script: true
 });
 
 
@@ -102,6 +103,12 @@ class World {
 	get personList() {
 		return this.community.personList;
 	}
+	get venueList() {
+		return this.community.venueList;
+	}
+	get householdList() {
+		return this.community.householdList;
+	}
 	find(id) {
 		let entity = null;
 		if( id === 'player' ) {
@@ -110,6 +117,9 @@ class World {
 		entity = entity || this.personList.find( site=>site.id==id );
 		entity = entity || this.siteList.find( site=>site.id==id );
 		entity = entity || this.itemList.find( item=>item.id==id );
+		entity = entity || this.venueList.find( venue=>venue.id==id );
+		entity = entity || this.householdList.find( household=>household.id==id );
+
 		return entity;
 	}
 }
@@ -130,12 +140,13 @@ class Item {
 }
 
 function hardcodeTestPeople(world) {
-	function assignPerson(id,criteriaFn) {
+	function assignPerson(id,fillColor,criteriaFn) {
 		let person = world.community.personList.find( person => {
 			return !person.hardcoded && person.venue && person.isAlive && criteriaFn(person);
 		});
 		console.assert(person);
 		person.hardcoded = true;
+		person.fillColor = fillColor || 'red';
 		person.id = id;
 		person.nameFirst = String.capitalize(id);
 		return person;
@@ -160,11 +171,11 @@ function hardcodeTestPeople(world) {
 		return item;
 	}
 
-	let brynjolf  = assignPerson( 'brynjolf',  person=>person.isMale && person.age>=18 );
-	let madesi    = assignPerson( 'madesi',    person=>person.isMale && person.age>=18 );
-	let brandShei = assignPerson( 'brandShei', person=>person.isMale && person.age>=18 );
-	let esbern    = assignPerson( 'esbern',    person=>person.isMale && person.age>=18 );
-	let delphine  = assignPerson( 'delphine',  person=>person.isFemale && person.age>=18 );
+	let brynjolf  = assignPerson( 'brynjolf',  'purple', person=>person.isMale && person.age>=18 );
+	let madesi    = assignPerson( 'madesi',    null,	person=>person.isMale && person.age>=18 );
+	let brandShei = assignPerson( 'brandShei', null,	person=>person.isMale && person.age>=18 );
+	let esbern    = assignPerson( 'esbern',    null,	person=>person.isMale && person.age>=18 );
+	let delphine  = assignPerson( 'delphine',  'cyan',	person=>person.isFemale && person.age>=18 );
 
 	let delphinesRoom = makeSite( 'delphinesRoom', delphine.venue );
 	makeSite( 'bedroomSleepingGiantInn', delphine.venue );
@@ -199,7 +210,7 @@ function main() {
 	community.communityBuilder.build(population);
 
 	console.logInception( community.venueList.map( obj => obj.text ).join('\n') );
-	console.log( community.personList.map( obj => obj.text ).join('\n') );
+	//console.log( community.personList.map( obj => obj.text.nameFull ).join('\n') );
 	console.logInception( community.householdList.map( obj => obj.text.text ).join('\n') );
 	console.logInception( community.personList.map( person => person.text.lineage ).join('\n') );
 	console.logInception( "Population="+community.population+" and "+community.ancestorList.length+" dead" );
@@ -233,17 +244,24 @@ function main() {
 
 	hardcodeTestPeople(world);
 
-	let observer = {
-		world: world,
-		community: community,
+	let player = new Person( community.culture, community, JobTypeHash.adventurer, null, {
+		id: 'player',
+		circle: new Circle('player',0,0,community.personRadius),
 		journal: new Journal(),
-		dialog: null
-	};
+		noHabits: true,
+		dialog: null,
+		scriptManager: null
+	});
+	community.personList.add( player );
 
-	let scriptManager = new Script.Manager( new Script.Validator(world) );
+	let observer = player;
+
+	let scriptManager = new Script.Manager();
 	scriptManager.setObserver(observer);
-	scriptManager.scanDefinitions( Quest.Data );
-	scriptManager.scanEntries();
+	scriptManager.addDefinitionHash( Quest.Data );
+	scriptManager.validateDefinitions(new Script.Validator(world,scriptManager));
+	scriptManager.scanGenerators();
+	world.scriptManager = scriptManager;
 
 	let gui = Gui.createManager( ()=>{} );
 	gui.create( viewMakerFn );
@@ -286,7 +304,7 @@ function main() {
 	Time.animationFrameTicker( dt => {
 		hackTick(dt);
 		clock.tick(dt);
-		scriptManager.tick(dt);
+		scriptManager.eventTick(dt);
 		community.tick(dt);
 		gui.tick(dt);
 		gui.render(dt);

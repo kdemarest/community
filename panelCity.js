@@ -44,9 +44,16 @@ PanelCity.Layout = (function(root) {
 		v.visible = visible;
 	}
 
+	this.markPos = (v,circle,center,zoom,visible) => {
+		this.mapPos(v,circle,center,zoom,visible);
+		v.y -= v.height*1.1;
+		v.scale = v.naturalHeight*0.50;
+		v.yAnchor = 1.0;
+	}
+
 	this.structure = this.mapPos;
 	this.person    = this.mapPos;
-	this.mark      = this.mapPos;
+	this.mark      = this.markPos;
 
 	this.mapCircle = (v,circle,center,zoom,visible) => {
 		let dim = leastDim() * zoom;
@@ -104,8 +111,8 @@ PanelCity.Visuals = function (root) {
 		let icon	= person.icon;
 		console.assert(icon);
 		let holding	= person.iconHolding;
-		let colorFill = person.hardcoded ? 'red' : 'black';
-		visuals[person.id] = [ new Visual.Circle('blue',colorFill), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
+		let fillColor = person.hardcoded ? person.fillColor : 'black';
+		visuals[person.id] = [ new Visual.Circle('blue',fillColor), (v) => layout.personCircle(v,person.circle,data.center,data.zoom,!data.personHide) ];
 		visuals[person.id+'Main'] = [ new Visual.Sprite(holding||icon), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];
 //		if( holding ) {
 //			visuals[person.id+'Held'] = [ new Visual.Sprite(holding), (v) => layout.person(v,person.circle,data.center,data.zoom,!data.personHide) ];

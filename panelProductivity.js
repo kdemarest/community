@@ -91,8 +91,8 @@ PanelProductivity.Layout = (function(root) {
 		e.image = image;
 		e.x = body().col(colIndex);
 		e.y = Math.max( yFloor, yCeiling );
-		e.xScale = (root.width * 0.05)/e.naturalWidth * xScale * 1.5;	// the 1.5 just makes em thicker
-		e.yScale = Math.abs(yFloor-yCeiling)/e.naturalHeight;
+		e.xScale = (root.width * 0.05)/ /*e.naturalWidth*/1 * xScale * 1.5;	// the 1.5 just makes em thicker
+		e.yScale = Math.abs(yFloor-yCeiling)/ /*e.naturalHeight*/1;
 		e.yAnchor = 1.0;
  	}
  	return this;

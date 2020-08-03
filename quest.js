@@ -1,627 +1,5 @@
 Module.add( 'quest', ()=>{
 
-let Quest = {
-	Data: {},
-	hash: []
-};
-
-/*
-Quest.Validator = new class {
-	constructor() {
-		this.keywords = {
-			quest: {
-				id: 1,
-				castSetup: 1,
-				mayGive: 1,
-				stateId: 1,
-				stateHash: 1,
-				topic: 1,
-			},
-			state: {
-				Mark:		'isCastMember',
-				Journal:	'isTextOrFn',
-				Stage:		'isTextOrFn',
-				Advance:	'isCondition',
-				Revert:		'isCondition',
-			},
-			entries: {
-				Q: 'isTextOrFn',
-				Q2: 'isTextOrFn',
-				A: 'isTextOrFn',
-				onQ: 'isState',
-				Ensure: 1,
-				Give: 1,
-				Take: 1,
-				Reward: 1,
-				Complete: 1,
-				Prompt: 1
-			},
-			castMember: {
-				any: 'isCastMember'
-			}
-		}
-	}
-
-	check(questData,trail,classifier,key,value) {
-		let what = ()=>'keyword ['+key+'] in ['+trail+'] value='+value;
-		if( !classifier[key] ) {
-			throw 'Unknown keyword '+what();
-		}
-		switch( classifier[key] ) {
-			case 'isState':
-				if( !questData.stateHash[value] ) {
-					throw 'Bad state specified '+what();
-				}
-				break;
-			case 'isTextOrFn':
-				let t = typeof value;
-				if( t!=='string' && t!=='function' ) {
-					throw 'Must be string or function '+what();
-				}
-				break;
-			case 'isCastMember':
-				if( questData.castSetup[value] === undefined ) {
-					throw 'Must specify a cast member '+what();
-				}
-				break;
-			case 'isCondition':
-				if( !Object.isObject(value) || !value.when || !value.goto ) {
-					throw key+' must be object when: state: '+what();
-				}
-				if( !questData.stateHash[value.goto] ) {
-					throw 'Bad state in second parameter '+what();
-				}
-				break;
-		}
-	}
-	checkHash(questData,trail,classifier,hash) {
-		Object.each( hash, (value,key) => {
-			this.check(questData,trail,classifier,key,value);
-		});
-	}
-	validate(questSpeciesId,questData) {
-		questData.castSetup = questData.castSetup || {};
-		questData.castSetup.giver = null;
-
-		this.checkHash(
-			questData,
-			questSpeciesId,
-			this.keywords.quest,
-			questData
-		);
-		Object.each( questData.stateHash, (state,stateId) => {
-			Object.each( state, (entryData,entryKey) => {
-				let isSpeaker = String.isLowercase( entryKey.substring(0) );
-				if( !isSpeaker ) {
-					this.check(
-						questData,
-						questSpeciesId+'.stateHash.'+stateId,
-						this.keywords.state,
-						entryKey,
-						entryData
-					);
-					return;
-				}
-				let speakerId = entryKey;
-				let speakerHashList = Array.assure(entryData);
-				this.check(
-					questData,
-					questSpeciesId+'.stateHash.'+stateId+'.'+speakerId,
-					this.keywords.castMember,
-					'any',
-					speakerId
-				);
-				speakerHashList.forEach( (speakerEntryHash,index) => {
-					this.checkHash(
-						questData,
-						questSpeciesId+'.stateHash.'+stateId+'.'+speakerId+'['+index+']',
-						this.keywords.entries,
-						speakerEntryHash
-					); 
-				});
-			});
-		});
-	}
-}
-
-Quest.Base = class {
-	constructor(giver,questId,questData,castFill) {
-		this.id			= questId
-		this.giver		= giver;
-		this.stateId	= null;
-		this.stateHash	= questData.stateHash;
-
-		let castSetup = Object.assign( {}, Object.clone(questData.castSetup), castFill );
-		this.castHash = this.castDetermineMembers( giver, Object.assign({},castSetup,{giver:giver}) );
-		this.beenInState = {};
-		this.__player  = null;
-		this.__speaker = null;
-		this.stateEnter( questData.stateId || 'intro' );
-	}
-	get player() {
-		return this.__player;
-	}
-	get journal() {
-		return this.player.journal;
-	}
-	//
-	// Cast
-	//
-	castDetermineMembers(giver,castSetup) {
-		let castHash = {};
-		Object.each( castSetup, (valueOrFn,castId) => {
-			if( valueOrFn === null ) {
-				throw 'Error key '+castId+' was not filled at quest inception.';
-			}
-			castHash[castId] = typeof valueOrFn === 'function' ? valueOrFn(this.context) : valueOrFn;
-			if( !castHash[castId] ) {
-				throw "Unable to fill cast ["+castId+"] in quest "+this.id;
-			}
-		});
-		return castHash;
-	}
-	castTraverse(fn) {
-		return Object.each( this.castHash, fn );
-	}
-	castIncludes(member) {
-		return Object.find( this.castHash, m => m===member );
-	}
-	castFindId(member) {
-		return Object.findKey( this.castHash, m => m===member );
-	}
-	//
-	// State
-	//
-	stateTraverse(fn) {
-		return Object.each( this.stateHash, fn );
-	}
-	get state() {
-		return this.stateHash[this.stateId];
-	}
-	get stateIsRepeat() {
-		return this.beenInState[this.stateId];
-	}
-	stateEnter(stateId,isRevert) {
-		if( !stateId || stateId == this.stateId ) {
-			return false;
-		}
-
-		if( this.stateId ) {
-			if( this.journal.stageExists(this.id,this.stateId) ) {
-				this.journal.stageSetDone(this.id,this.stateId,!isRevert);
-			}
-		}
-
-		console.assert(stateId && typeof(stateId=='string'));
-		this.stateId = stateId;
-		console.assert(this.state);
-		if( this.state.Journal ) {
-			// Add should allow, and ignore, duplicate journal entries.
-			this.journal.add( this.id, this.resolve(this.state.Journal) );
-		}
-		if( this.state.Stage ) {
-			// Add should allow, and ignore, duplicate journal entries.
-			this.journal.stageAdd( this.id, this.stateId, this.resolve(this.state.Journal) );
-		}
-		if( this.state.Mark ) {
-			let castId = this.resolve(this.state.Mark);
-			this.journal.mark( this.id, this.castHash[castId] );
-		}
-		if( this.state.Complete ) {
-			this.journal.complete( this.id );
-		}
-		if( this.state.Reward ) {
-			this.journal.stageAdd( this.id, 'reward', this.resolve(this.state.Reward) );
-		}
-	}
-	get context() {
-		let context			= Object.assign( {}, this.castHash );
-		context.me			= this.__speaker;
-		context.player		= this.__player;
-		context.castItem	= this.castItem.bind(this);
-		context.castPerson	= this.castPerson.bind(this);
-		return context;
-	}
-	//
-	// Casting
-	//
-	get personList() {
-		return this.giver.community.personList;
-	}
-	castItem(fn) {
-		return 'cinnamon';
-	}
-	castPerson(fnList) {
-		let person;
-		fnList = Array.assure(fnList);
-		fnList.every( fn => {
-			person = this.personList.pick( person => !this.castIncludes(person) && fn(person) );
-			return !person;
-		});
-		return person;
-	}
-	journalFail() {
-		this.failed = true;
-		this.player.journal.fail( this.id );
-	}
-	testFailure() {
-		let failed = false;
-		this.castTraverse( cast => {
-			if( cast.isDead ) {
-				failed = true;
-			}
-		});
-		if( failed ) {
-			this.journalFail();
-		}
-	}
-	resolve(valueOrFn) {
-		return typeof valueOrFn === 'function' ? valueOrFn(this.context) : valueOrFn;
-	}
-	getDialogEntries(player,speaker,gatherFn) {
-		if( player.journal.isComplete(this.id) ) {
-			return;
-		}
-		this.__player  = player;
-		this.__speaker = speaker;
-		let castId	= this.castFindId(speaker);
-		console.assert(castId);
-		let state = this.state;
-		// Maybe I don't have any conversation for this person...
-		if( !state[castId] ) {
-			return null;
-		}
-		let dialog = state[castId];
-
-		let dialogList = Array.assure( state[castId] );
-		dialogList.forEach( dialog => {
-			let result = {
-				stateId: this.stateId,
-				quest: this
-			};
-
-			let addChoice = (text,newStateId,say) => {
-				let choice = {
-					quest:		this,
-					domClass:	'dialogChoice',
-					id:			this.id+'.'+this.stateId+'.'+Date.makeUid(),
-					from:		this.stateId,
-					text:		text,
-					said:		this.beenInState[newStateId],
-					newStateId:	newStateId,
-					say: 		say
-				}
-				gatherFn( choice );
-			}
-
-			addChoice(
-				this.resolve( this.stateIsRepeat && dialog.Q2 ? dialog.Q2 : dialog.Q ),
-				this.resolve( dialog.onQ ),
-				this.resolve( dialog.A )
-			);
-		});
-	}
-	// Selection expects to have a 'pickedId' within it.
-	select(reply) {
-		this.beenInState[reply.from] = true;
-		this.stateEnter( reply.newStateId );
-	}
-	tick(dt) {
-		this.testFailure();
-		if( this.failed ) return;
-
-		if( this.state.Advance ) {
-			let when = this.resolve( this.state.Advance.when );
-			if( when ) {
-				let goto = this.resolve( this.state.Advance.goto );
-				this.stateEnter(goto);
-			}
-		}
-		if( this.state.Revert ) {
-			let when = this.resolve( this.state.Advance.when );
-			if( when ) {
-				let goto = this.resolve( this.state.Advance.goto );
-				this.stateEnter(goto);
-			}
-		}
-
-	}
-}
-
-Quest.Determine = (person) => {
-	let questHash = {};
-	Object.each( Quest.Data, (questData,questSpeciesId) => {
-		if( !questData.mayGive(person) ) {
-			return;
-		}
-
-		let questId = questSpeciesId+'.'+person.id;
-		let quest = Quest.hash[questId] || new Quest.Base(
-			person,
-			questId,
-			questData,
-			{ item: 'cinnamon' }
-		);
-		questHash[quest.id] = quest;	
-	});
-
-	// Maybe you are just a participant in this quest?
-	Object.each( Quest.hash, quest => {
-		if( quest.castIncludes(person) && !questHash[quest.id] ) {
-			questHash[quest.id] = quest;
-		}
-	});
-	return questHash;
-};
-
-Quest.Validate = () => {
-	Object.each( Quest.Data, (questData,questSpeciesId) => 
-		Quest.Validator.validate(questSpeciesId,questData)
-	);
-}
-
-
-
-Quest.Data.Fetch = {
-	mayGive: entity=>entity.isPerson,	// so, could be an item etc.
-	setup: {
-		cast: {
-			giver:	null,
-			item:	null,	// Means you must provide one
-			person:	c=>c.castPerson([
-				p=>p.jobType.id=='grocer',
-				p=>p.jobType.produces.id=='food',
-				p=>p.isAlive
-			])
-		},
-
-	},
-	stateId: 'intro',
-	stateHash: {
-		intro: {
-			giver: {
-				pl:	'Do you enjoy cooking?',
-				p2:	c=>'Do you still need that '+c.item+'?',
-				me:	c=>'Yes! I need some '+c.item+' for my pantry. Can you get it?',
-				Offer: {
-					Yes: 'I will get it, no problem.',
-					No:  'Perhaps another time.',
-					Announce: {
-						say: c=>'Great! Just go visit '+c.person.text.nameFull+' and get it.',
-						goto: 'start'
-					}
-				}
-			},
-		},
-		start: {
-			Mark:		'person',
-			Journal:	c=>'Fetch '+c.item+' for '+c.me.text.nameFull+'.',
-			Stage:		c=>'Visit '+c.person.text.nameFull+'.',
-			Advance:	{
-				when:	c=>c.player.has(c.item),
-				goto:	'gotIt'
-			},
-			giver: {
-				Prompt:	c=>'Do you have that '+c.item+' from '+c.person.text.nameFull+' yet?',
-			},
-			person: {
-				Ensure: c=>!c.person.has(c.item) ? c.person.inventory.add(c.item) : null,
-				Q:		c=>c.giver.text.nameFull+' would like some '+c.item+'.',
-				A:		'Oh, yes I do. Here you go!',
-				Give:	c=>c.player.inventory.add(c.item),	// comes with an automatic note tht you got it
-				onQ:	'gotIt'
-			}
-		},
-		gotIt: {
-			Mark:		'giver',
-			Stage:		c=>'Return to '+c.giver.text.nameFull+'.',
-			Revert:		{
-				when:	c=>!c.player.has(c.item),
-				goto:	'start'
-			},
-			giver: {
-				Q:		c=>'I have the '+c.item+' for you.',
-				A:		'Oh thank you so much!',
-				Take:	c=>c.player.inventory.remove(c.item),	// You get a message
-				Reward:	'Here is some money.',
-				Complete: true
-			}
-		}
-	}
-}
-*/
-
-Journal.Data.aBladeInTheDark = {
-	rent:	{
-		bullet: "Rent the Attic Room in Riverwood",
-		detail: "Somebody got to the horn of Jurgen Windcaller before me. I need to meet them in Riverwood."
-	},
-	meet1:	{
-		bullet: "Enter the room",
-	},
-	meet2: {
-		bullet: "Meet Delphine",
-	},
-	find: {
-		bullet: "Find Esbern in Riften"
-	}
-};
-
-Quest.Data.tavernKeeper = {
-	mayGive: 'delphine',
-	cast: {
-		giver: null,
-	},
-	priority: 'normal',
-	stateHash: {
-		BEGIN: [
-			{ onTalk: 'giver', do: [
-				{ pl: "I'd like to rent a room. (10 gold)" },
-				{ change: 'player', gold: -10 },
-				{ me: "Just take the room on the right." },
-			]}
-		]
-	}
-}
-
-Quest.Data.aBladeInTheDark = {
-	mayGive: entity=>entity.id == "delphine",
-	cast: {
-		// Possibly the player is always in the cast...
-		giver:		'delphine',
-		delphine:	'delphine',
-		brynjolf:	'brynjolf',
-		esbern:		'esbern',
-		bedroom:	'bedroomSleepingGiantInn',
-		delroom:	'delphinesRoom',
-		delroomDoor:'delphinesRoomDoor',
-		horn:		'hornOfJurgen',
-		wardrobe:	'delphineWardrobe',
-		bladeRoom:	'bladesHiddenRoom',
-	},
-	flag: {
-		// This can't be calculated immediately, because you might improve your
-		// stats and then return. So we calculate it on-demand, and re-use it
-		// thereafter.
-		brPersuade:	c=>c.player.persuade(50)
-	},
-	priority: 'quest',
-	stateHash: {
-		BEGIN: [
-			{ journal: 'aBladeInTheDark', start: 'rent', mark: 'delphine' },
-			{ onTalk: 'delphine', do: [
-				{ priority: 'normal' },
-				{ pl: "I'd like to rent the attic room. (10 gold)" },
-				{ change: 'player', gold: -10 },
-				{ me: "Attic room, eh? Well... we don't have an attic room, but you can have the one on the left. Make yourself at home." },
-				{ exit: 'meet1' }
-			]}
-		],
-		meet1: [
-			{ script: 'tavernKeeper', disable: true },
-			{ journal: 'aBladeInTheDark', done: 'rent', start: 'meet1', mark: 'bedroom' },
-			{ onTick: 'delphine', do: [
-				{ change: 'delphine', travelTo: 'bedroom' },
-				{ await: [
-					{ query: 'delphine', isAt: 'bedroom' },
-					{ query: 'player', isAt: 'bedroom' }
-				]},
-				{ me: "So you're the Dragonborn I've been hearing so much about." },
-				{ me: "I think you're looking for this." },
-				{ change: 'player', give: 'horn' },
-				{ me: "We need to talk. Follow me." },
-				{ exit: 'meet2' }
-			]}
-		],
-		meet2: [
-			{ journal: 'aBladeInTheDark', done: 'meet1', start: 'meet2', mark: 'delroom' },
-			{ onTick: 'delphine', do: [
-				{ change: 'delphine', travel: 'delroom' },
-				{ await: [
-					{ query: 'delroom', isAt: 'delroom' },
-					{ query: 'player', isAt: 'delroom' },
-					{ query: 'delroomDoor', hasState: 'open' },
-				]},
-				{ me: "Close the door." },
-				{ exit: 0 }
-			]},
-			{ onTick: 'delphine', do: [
-				{ await: [
-					{ query: 'delroomDoor', hasState: 'closed' }
-				]},
-				{ me: "Now we can talk." },
-				{ goto: 'meet3' }
-			]}
-		],
-		meet3: [
-			{ journal: 'aBladeInTheDark', mark: 'bladeRoom' },
-			{ change: 'wardrobe', setState: 'open' },
-			{ change: 'delphine', travelTo: 'bladeRoom' },
-			{ onTick: 'delphine', do: [
-				{ await: [
-					{ query: 'me', isAt: 'bedroom' },
-					{ quest: 'player', isAt: 'bedroom' }
-				]},
-				{ me: "The greybeards seem to think you're the dragonborn. I hope they're right." },
-				{ pl: "So what now?" },
-				{ goto: 'find' }
-			]}
-		],
-		find: [
-			{ onEscape: 'delphine', do: [
-				{ me: "You'll be back. If you're really Dragonborn this is your destiny." },
-			]},
-			{ onTalk: 'delphine', do: [
-				{ me: "Go find Esbern." },
-				{ exit: 0 }
-			]},
-			{ onResume: 'delphine', do: [
-				{ me: "Have you found Esbern yet? Get to it!" },
-			]},
-			{ onTalk: 'esbern', do: [
-				{ me: "You found me!" },
-				{ exit: 'complete' }
-			]},
-			{ label: 'reveal', do: [
-				{ me: "Yeah. I bet I know your guy. He's hiding out in the Ratway Warrens. Paying us good coin for nobody to know about it." },
-				{ deadend: 1 }
-			]},
-			{ onTalk: 'brynjolf', do: [
-				{ pl: "I'm looking for this old guy hiding out in Riften." },
-				{ if: 1, journal: 'aChanceArrangement', stage: 'complete', do: [
-					{ run: 'reveal' }
-				]},
-				{ me: "Expecting free information, eh? Help me deal with business first.\n"+
-					  "Besides, you look like your pockets are a little light on coin, am I right?"
-				},
-				{ choice: "Let me find him first. Dragons are bad for business. (Persuade)", do: [
-					{ if: 'brPersuade1', do: [
-						{ me: "Aye, you've got a point there." },
-						{ run: 'reveal' },
-					],
-					else: [
-						{ me: "Passing on a golden opportunity is worse." },
-						{ quest: 'aChanceArrangement', goto: 'getInstructions' }
-					]}
-				]},
-				{ choice: "Hold on - I just wanted some information.", do: [
-					{ me: "And I'm busy. You help me out, and I'll help you out. That's just how it is." },
-					{ deadEnd: 1 },
-				]},
-				{ ask: 1 }
-			]},
-		],
-		complete: [
-			{ journal: 'aBladeInTheDark', complete: true },
-			{ onTalk: 'delphine', do: [
-				{ me: "Well done. I'm glad you found Esbern." },
-				{ exit: 'complete' }
-			]},
-		]
-	}
-}
-
-Journal.Data.miscellaneous = {
-	listenBrynjolf: {
-		bullet: "Listen to Brynjolf's Scheme"
-	}
-}
-
-Journal.Data.aChanceArrangement = {
-	meet:	{
-		bullet: "Meet Brynjolf During Daytime",
-	},
-	steal:	{
-		bullet: "Steal Madesi's Ring",
-	},
-	plant:	{
-		bullet: "Plant Madesi's Ring on Brand-Shei",
-	},
-	speak:	{
-		bullet: "Speak to Brynjolf"
-	}
-};
-
 //===========================================================
 //===========================================================
 /*
@@ -633,7 +11,7 @@ stateHash: hash of states. Always gets an implicit state called 'complete' if no
 	- onEvent: <who> <conditional> <finish> <do>(see below)
 
 * onEvent specifies who it applies to, and may be
-	- types are onEscape, onResume, onTick, onTalk
+	- types are onTick, onTalk, onInteract
 * conditionals, which can include not:1 include
 	- query: (anyId)
 		isAt (anyId)
@@ -677,9 +55,250 @@ Each event keeps its own state.
 */
 
 
+let Quest = {
+	Data: {},
+	hash: []
+};
+
+Journal.Data.aBladeInTheDark = {
+	rent:	{
+		bullet: "Rent the Attic Room in Riverwood",
+		detail: "Somebody got to the horn of Jurgen Windcaller before me. I need to meet them in Riverwood."
+	},
+	meet1:	{
+		bullet: "Enter the room",
+	},
+	meet2: {
+		bullet: "Meet Delphine",
+	},
+	find: {
+		bullet: "Find Esbern in Riften"
+	}
+};
+
+Quest.Data.tavernKeeper = {
+	generator: 'delphine',
+	cast: {
+		giver:		null,
+		bedroom:	'bedroomSleepingGiantInn',
+	},
+	flag: {
+		canAfford:	{ query: 'player', key: 'gold', gte: 10 },
+		roomRented: { isTimer: true },
+	},
+	priority: 'normal',
+	stateHash: {
+		BEGIN: [
+			{ to: 'giver', event: 'talk', do: [
+				{ if: { query: 'giver', key: 'noTavern' }, do: [
+					{ exit: 0 }
+				]},
+				{ me: "Welcome to the Sleeping Giant Inn." },
+				{ pl: "I'd like to rent a room. (10 gold)" },
+				{ if: 'canAfford', do: [
+					{ change: 'player', gold: -10 },
+					{ me: "OK. Follow me." },
+					{ exit: 'lead' }
+				],
+				else: [
+					{ me: "Come back when you have more coin." },
+				]}
+
+			]}
+		],
+		lead: [
+			{ to: 'giver', event: 'talk', do: [
+				{ me: "Follow me to your room." }
+			]},
+			{ to: 'giver', event: 'tick', do: [
+				{ change: 'giver', travelTo: 'bedroom' },
+				{ await: [
+					{ query: 'giver', isAt: 'bedroom' },
+					{ query: 'player', isAt: 'bedroom' },
+				]},
+				{ me: "Here you are. Have a good night sleep." },
+				{ exit: 'rented' }
+			]}
+		],
+		rented: [
+			{ to: 'giver', event: 'talk', do: [
+				{ me: "I hope you are enjoying your room." }
+			]},
+			{ to: 'giver', event: 'tick', do: [
+				{ timer: 'roomRented', start: 50 },
+				{ await: 'roomRented' },
+				{ goto: 'BEGIN' }
+			]}
+		]
+	}
+}
+
+Quest.Data.aBladeInTheDark = {
+	generator: 'delphine',
+	cast: {
+		// Possibly the player is always in the cast...
+		giver:		null,
+		delphine:	'delphine',
+		brynjolf:	'brynjolf',
+		esbern:		'esbern',
+		bedroom:	'bedroomSleepingGiantInn',
+		delroom:	'delphinesRoom',
+		delroomDoor:'delphinesRoomDoor',
+		horn:		'hornOfJurgen',
+		wardrobe:	'delphineWardrobe',
+		bladeRoom:	'bladesHiddenRoom',
+	},
+	flag: {
+		// This can't be calculated immediately, because you might improve your
+		// stats and then return. So we calculate it on-demand, and re-use it
+		// thereafter.
+		brPersuade:	{ fn: c=>c.player.persuade(50), cache: true }
+	},
+	priority: 'quest',
+	declareHash: {
+		reveal: [
+			{ me: "Yeah. I bet I know your guy. He's hiding out in the Ratway Warrens. Paying us good coin for nobody to know about it." },
+			{ deadend: 1 }
+		]
+	},
+	stateHash: {
+		BEGIN: [
+			{ journal: 'aBladeInTheDark', start: 'rent', mark: 'delphine' },
+			{ to: 'delphine', event: 'talk', do: [
+				{ priority: 'normal' },
+				{ pl: "I'd like to rent the attic room. (10 gold)" },
+				{ change: 'player', gold: -10 },
+				{ me: "Attic room, eh? Well... we don't have an attic room, but you can have the one on the left. Make yourself at home." },
+				{ exit: 'meet1' }
+			]}
+		],
+		meet1: [
+			{ change: 'delphine', key: 'noTavern', value: 'true' },
+			{ journal: 'aBladeInTheDark', done: 'rent', start: 'meet1', mark: 'bedroom' },
+			{ to: 'delphine', event: 'tick', do: [
+				{ change: 'delphine', travelTo: 'bedroom' },
+				{ await: [
+					{ query: 'delphine', isAt: 'bedroom' },
+					{ query: 'player', isAt: 'bedroom' }
+				]},
+				{ me: "So you're the Dragonborn I've been hearing so much about." },
+				{ me: "I think you're looking for this." },
+				{ change: 'player', give: 'horn' },
+				{ me: "We need to talk. Follow me." },
+				{ exit: 'meet2' }
+			]}
+		],
+		meet2: [
+			{ journal: 'aBladeInTheDark', done: 'meet1', start: 'meet2', mark: 'delroom' },
+			{ to: 'delphine', event: 'tick', do: [
+				{ change: 'delphine', travelTo: 'delroom' },
+				{ await: [
+					{ query: 'delroom', isAt: 'delroom' },
+					{ query: 'player', isAt: 'delroom' },
+					{ query: 'delroomDoor', hasState: 'open' },
+				]},
+				{ me: "Close the door." },
+				{ exit: 0 }
+			]},
+			{ to: 'delphine', event: 'tick', do: [
+				{ await: [
+					{ query: 'delroomDoor', hasState: 'closed' }
+				]},
+				{ me: "Now we can talk." },
+				{ goto: 'meet3' }
+			]}
+		],
+		meet3: [
+			{ journal: 'aBladeInTheDark', mark: 'bladeRoom' },
+			{ change: 'wardrobe', key: 'state', value: 'open' },
+			{ change: 'delphine', travelTo: 'bladeRoom' },
+			{ to: 'delphine', event: 'tick', do: [
+				{ await: [
+					{ query: 'delphine', isAt: 'bedroom' },
+					{ query: 'player', isAt: 'bedroom' }
+				]},
+				{ me: "The greybeards seem to think you're the dragonborn. I hope they're right." },
+				{ pl: "So what now?" },
+				{ goto: 'find' }
+			]}
+		],
+		find: [
+			{ to: 'delphine', event: 'talk', do: [
+				{ onEscape: [
+					{ me: "You'll be back. If you're really Dragonborn this is your destiny." },
+				]},
+				{ if: 'talkResumed', do: [
+					{ me: "Have you found Esbern yet? Get to it!" },
+				],
+				else: [
+					{ me: "Go find Esbern." },
+				]},
+				{ exit: 0 }
+			]},
+			{ to: 'esbern', event: 'talk', do: [
+				{ me: "You found me!" },
+				{ exit: 'complete' }
+			]},
+			{ to: 'brynjolf', event: 'talk', do: [
+				{ pl: "I'm looking for this old guy hiding out in Riften." },
+				{ if: { query: 'aChanceArrangement', stage: 'complete' }, do: [
+					{ run: 'reveal' }
+				]},
+				{ me: "Expecting free information, eh? Help me deal with business first.\n"+
+					  "Besides, you look like your pockets are a little light on coin, am I right?"
+				},
+				{ choice: "Let me find him first. Dragons are bad for business. (Persuade)", do: [
+					{ if: 'brPersuade', do: [
+						{ me: "Aye, you've got a point there." },
+						{ run: 'reveal' },
+					],
+					else: [
+						{ me: "Passing on a golden opportunity is worse." },
+						{ goto: { quest: 'aChanceArrangement', state: 'getInstructions' } }
+					]}
+				]},
+				{ choice: "Hold on - I just wanted some information.", do: [
+					{ me: "And I'm busy. You help me out, and I'll help you out. That's just how it is." },
+					{ deadend: 1 },
+				]},
+				{ ask: true }
+			]},
+		],
+		complete: [
+			{ journal: 'aBladeInTheDark', complete: true },
+			{ to: 'delphine', event: 'talk', do: [
+				{ me: "Well done. I'm glad you found Esbern." },
+				{ exit: 'complete' }
+			]},
+		]
+	}
+}
+
+Journal.Data.miscellaneous = {
+	listenBrynjolf: {
+		bullet: "Listen to Brynjolf's Scheme"
+	}
+}
+
+Journal.Data.aChanceArrangement = {
+	meet:	{
+		bullet: "Meet Brynjolf During Daytime",
+	},
+	steal:	{
+		bullet: "Steal Madesi's Ring",
+	},
+	plant:	{
+		bullet: "Plant Madesi's Ring on Brand-Shei",
+	},
+	speak:	{
+		bullet: "Speak to Brynjolf"
+	}
+};
+
+
 
 Quest.Data.aChanceArrangement = {
-	mayGive: entity=>entity.id == "brynjolf",
+	generator: 'brynjolf',
 	cast: {
 		brynjolf:	'brynjolf',
 		bStall:		'brynjolfStall',
@@ -690,31 +309,55 @@ Quest.Data.aChanceArrangement = {
 	},
 	flag: {
 		// these all go directly onto 'c'
-		seekingEsbern:	c => c.quest.findEsbern.inProgress,
-		framedMadesi:	c => c.quest.aChanceArrangement.complete,
-		persuade1:		c => c.recalc( 'never', c.player.persuade(50) ),
-		haveGold:		c => c.player.gold >= 500,
-		killedGuard:	c => c.quest.riftenGate.killedGuard,
-		scamTime:		c => c.time >= 8 && c.time <= 12+8,
-		stoleRing:		[{ query: 'player', has: 'ring' }],
-		plantedRing:	[{ query: 'brandShei', has: 'ring' }],
+		seekingEsbern:	{ fn: c => c.quest.findEsbern.inProgress },
+		framedMadesi:	{ fn: c => c.quest.aChanceArrangement.complete },
+		persuade1:		{ fn: c => c.player.persuade(50) },
+		haveGold:		{ fn: c => c.player.gold >= 500 },
+		killedGuard:	{ fn: c => c.quest.riftenGate.killedGuard },
+		scamTime:		{ fn: c => c.time >= 8 && c.time <= 12+8 },
+		stoleRing:		{ query: 'player', has: 'ring' },
+		plantedRing:	{ query: 'brandShei', has: 'ring' },
 		atStallDaytime:	[
 			{ query: 'scamTime' },
 			{ query: 'brynjolf', isAt: 'bStall' },
 			{ query: 'player', isAt: 'bStall' },
 		],
 	},
+	declareHash: {
+		explain: [
+			{ if: { query: 'state', eq: 'getStarted' }, do: [
+				{ choice: "I'm ready. Let's get this started.", do: [
+					{ me: "Good. Wait until I start the distraction, etc..." },
+					{ exit: 'stealRing' }
+				]}
+			]},
+			{ choice: "Why are we doing this to Brand-Shei?", do: [
+				{ me: "We've been contracted..." },
+				{ deadend: 1 }
+			]},
+			{ choice: "How am I supposed to do all of this?", do: [
+				{ me: "Do you want me to hold... blah blah" },
+				{ deadend: 1 }
+			]},
+			{ ask: true }
+		],
+		speechify: [
+			{ me: 'Gather round everyone.' },
+			{ me: 'etc etc. some of you will doubt...' },
+			{ say: 'madesi', text: 'Is this another scam like last time?' }
+		]
+	},
 	stateHash: {
 		BEGIN: [
-			{ onTick: 'brynjolf', do: [
+			{ to: 'brynjolf', event: 'tick', do: [
 				{ await: 'atStallDaytime' },
 				{ change: 'brynjolf', talkTo: 'player' }
 			]},
-			{ onEscape: 'brynjolf', do: [
-				{ me: "I can take a hint. You want to make some coin, come find me." },
-				{ exit: 'getInstructions' },
-			]},
-			{ onTalk: 'brynjolf', do: [
+			{ to: 'brynjolf', event: 'talk', do: [
+				{ onEscape: [
+					{ me: "I can take a hint. You want to make some coin, come find me." },
+					{ exit: 'getInstructions' },
+				]},
 				{ if: 'haveGold', do: [
 					{ me: "Never done an honest day's work in your life for all that coin you carry..." },
 				],
@@ -722,7 +365,7 @@ Quest.Data.aChanceArrangement = {
 					{ me: "Running a little light in the pockets, lad?" }
 				]},
 				{ journal: 'miscellaneous', start: 'listenBrynjolf', mark: 'brynjolf' },
-				{ pl: "I'm sorry, what?", top: 1, do: [
+				{ pl: "I'm sorry, what?", do: [
 					{ me: "I'm saying you've got the coin, but you didn't earn a Septim of it honestly. I can tell." },
 					{ deadend: 1 },
 				]},
@@ -742,17 +385,17 @@ Quest.Data.aChanceArrangement = {
 				{ choice: "My wealth is none of your business.", do: [
 					{ me: "Oh, but that's where your wrong lad. Wealth is my business. Maybe you'd like a taste?" },
 				]},
-				{ ask: 1 },
+				{ ask: true },
 				{ pl: "What do you have in mind?" },
 				{ me: "A bit of an errand. Need extra hands." },
 				{ goto: 'getInstructions' }
 			]}
 		],
 		getInstructions: [
-			{ onResume: 'brynjolf', do: [
-				{ me: "Glad to see you came to your senses." },
-			]},
-			{ onTalk: 'brynjolf', do: [
+			{ to: 'brynjolf', event: 'talk', do: [
+				{ if: 'talkResumed', do: [
+					{ me: "Glad to see you came to your senses." },
+				]},
 				{ choice: "What do I have to do?", do: [
 					{ me: "Simple... I'm going to cause... Steal Madesi's ring and plant it on Brand-Shei." },
 				]},
@@ -760,7 +403,7 @@ Quest.Data.aChanceArrangement = {
 					{ me: "You're trying my patience." },
 					{ exit: 0 }
 				]},
-				{ ask: 1 },
+				{ ask: true },
 				{ choice: "Why plant the ring on Brand-Shei?", do: [
 					{ me: "There's someone that want to see him put out of business permanently. That's all you need to know." },
 					{ if: 'scamTime', do: [
@@ -774,72 +417,45 @@ Quest.Data.aChanceArrangement = {
 					{ me: "Sorry... I usually have a nose for this kind of thing. Never mind then, lad. If you change your mind, come find me." },
 					{ exit: 0 }
 				]},
-				{ ask: 1 },
+				{ ask: true },
 				{ exit: 'getStarted' },
 			]},
 		],
 		getStarted: [
 			{ journal: 'miscellaneous', done: 'listenBrynjolf' },
 			{ journal: 'aChanceArrangement', start: 'meet', mark: 'brynjolf' },
-			{ onTick: 'brynjolf', do: [
-				{ when: 'scamTime' },
+			{ to: 'brynjolf', event: 'tick', do: [
+				{ await: 'scamTime' },
 				{ change: 'brynjolf', travelTo: 'bStall' },
 			]},
-			{ onTick: 'brynjolf', do: [
+			{ to: 'brynjolf', event: 'tick', do: [
 				{ await: 'atStallDaytime' },
-				{ pick: [
-					{ me: "I'm ready when you are. Just give the word." },
-					{ me: "OK. Ready to make some coin?" }
-				]},
+				{ me: "I'm ready when you are. Just give the word." },
 				{ change: 'brynjolf', talkTo: 'player' }
 			]},
-			{ run: 'explain', from: 'shared' }
-		],
-		shared: [
-			{ label: 'explain', onTalk: 'brynjolf', do: [
-				{ if: { query: 'self', state: 'getStarted' },
-					choice: "I'm ready. Let's get this started.", do: [
-					{ me: "Good. Wait until I start the distraction, etc..." },
-					{ exit: 'stealRing' }
-				]},
-				{ choice: "Why are we doing this to Brand-Shei?", do: [
-					{ me: "We've been contracted..." },
-					{ deadEnd: 1 }
-				]},
-				{ choice: "How am I supposed to do all of this?", do: [
-					{ me: "Do you want me to hold... blah blah" },
-					{ deadEnd: 1 }
-				]},
-				{ ask: 1 }
-			]},
-			{ label: 'speechify', onTick: 'brynjolf', do: [
-				{ mode: 'bark' },
-				{ me: 'Gather round everyone.' },
-				{ me: 'etc etc. some of you will doubt...' },
-				{ madesi: 'Is this another scam like last time?' }
-			]}
+			{ run: 'explain' }
 		],
 		stealRing: [
-			{ run: 'explain', from: 'shared' },
-			{ run: 'speechify', from: 'shared' },
+			{ run: 'explain' },
+			{ run: 'speechify' },
 			{ journal: 'aChanceArrangement', done: 'meet', start: 'steal', mark: 'ring' },
-			{ onTick: 'player', do: [
+			{ to: 'player', event: 'tick', do: [
 				{ await: 'stoleRing' },
 				{ goto: 'plantRing' }
 			]}
 		],
 		plantRing: [
-			{ run: 'explain', from: 'shared' },
-			{ run: 'speechify', from: 'shared' },
+			{ run: 'explain' },
+			{ run: 'speechify' },
 			{ journal: 'aChanceArrangement', done: 'steal', start: 'plant', mark: 'brandShei' },
-			{ onTick: 'player', do: [
-				{ await: 'planted' },
+			{ to: 'player', event: 'tick', do: [
+				{ await: 'plantedRing' },
 				{ goto: 'speakBrynjolf' }
 			]}
 		],
 		speakBrynjolf: [
 			{ journal: 'aChanceArrangement', done: 'plant', start: 'speak', mark: 'brynjolf' },
-			{ onTalk: 'brynjolf', do: [
+			{ to: 'brynjolf', event: 'talk', do: [
 				{ journal: 'aChanceArrangement', done: 'speak', complete: true },
 				{ me: "My organization's been having a run of bad luck... There's more if you think you can handle it." },
 			]}
@@ -855,197 +471,282 @@ Script.Result = {
 	AWAIT_REPLY: 2,
 	AWAIT_CONDITION: 4,
 	END: 8,
+	POP: 16 & 1,
 };
 
 Script.Command = new function() {
-	this.typeDetails = {
-		isDefinition:   { is: 'DEF',   checker: 'command' },
-		isStateHash:    { is: 'STATE', checker: 'hash', memberType: ['isStateDef'] },
-		isCastHash:     { is: 'CAST',  checker: 'hash', memberType: ['isCastDef'] },
-		isFlagHash:     { is: 'CAST',  checker: 'hash', memberType: ['isConditional','isFunction'] },
-		isCommandArray: { is: 'CMD',   checker: 'commandList' },
-		isConditional:  { is: 'CONDITIONAL', checker: 'commandList' },
-		isPick:         { is: 'PICK',  checker: 'commandList' },
-	}
+	this.eventIdHash = {
+		'talk': 1,
+		'tick': 1,
+		'trade': 1,
+		'hit': 1,
+		'suffer': 1
+	};
 
 	this.specHash = {
-		stateHash: {
-			allow: ['DEF'],
-			param: {
-				id:			['isString'],
-				mayGive:	['isString','isFunction'],
-				cast:		['isCastHash','undefined'],
-				flag:		['isFlagHash','undefined'],
-				priority:	['isPriority','undefined'],
-				stateHash:	['isStateHash'],
+		sGenerator: {
+			tString: 'tEntityId',
+			tFunction: true
+		},
+		sCastHash: {
+			thisObjectIsKeyValuePairs: true,
+			tObject: 'sCastDef',
+		},
+		sCastDef: {
+			tString: 'tEntityId',
+			tNull: true
+		},
+		sFlagHash: {
+			thisObjectIsKeyValuePairs: true,
+			tObject: 'sFlagDef'
+		},
+		sFlagDef: {
+			tObject: 'commandType:FLAG',
+			tArray: 'sConditional',
+			tBoolean: true,
+			tUndefined: true
+		},
+		sDeclareHash: {
+			thisObjectIsKeyValuePairs: true,
+			tObject: 'sDeclareDef'
+		},
+		sDeclareDef: {
+			tArray: 'sCommandBlock'
+		},
+		sStateHash: {
+			thisObjectIsKeyValuePairs: true,
+			tObject: 'sStateDef'
+		},
+		sStateDef: {
+			tArray: 'sStateCommandBlock'
+		},
+		sStateCommandBlock: {
+			tObject: 'commandType:STATE',
+		},
+		sConditional: {
+			tBoolean: true,
+			tString: 'tFlagId',
+			tObject: 'commandType:CONDITIONAL',
+			tArray:  'sConditional'
+		},
+		sCommandBlock: {
+			tObject: 'commandType:CMD',
+		},
+		sDialog: {
+			tString: 'tString'
+		},
+		sQuestStateTarget: {
+			tNumber: true,
+			tString: 'tStateId',
+			tObject: 'tQuestStateId'
+		},
+	}
+
+	this.cmdHash = {
+		definition: {
+			commandKeys: {
+				id:			['tString'],
+				generator:	'sGenerator',
+				cast:		'sCastHash',
+				flag:		'sFlagHash',
+				priority:	'tPriority',
+				declareHash: 'sDeclareHash',
+				stateHash:	'sStateHash'
 			}
 		},
-		cast: {
-			allow: ['DEF'],
-			arbitraryKeys: true,
-			cmdId: 'cmdCast'
-		},
-		flag: {
-			allow: ['DEF'],
-			arbitraryKeys: true,
-			cmdId: 'cmdFlag'
-		},
 		priority: {
-			allow: ['DEF', 'CMD'],
-			param: {
-				priority:	['isPriority'],
-			},
-			cmdId: 'cmdPriority'
-		},
-		onTick: {
-			allow: ['STATE'],
-			param: {
-				onTick:		['isCastId'],
-				label:		['isLabel','undefined'],
-				do:			['isCommandArray'],
-			},
-			cmdId:		'cmdOnTick',
-		},
-		onTalk: {
-			allow: ['STATE'],
-			param: {
-				onTalk:		['isCastId'],
-				label:		['isLabel','undefined'],
-				do:			['isCommandArray'],
-			},
-			cmdId:		'cmdOnTalk',
-		},
-		onEscape: {
-			allow: ['STATE'],
-			param: {
-				onEscape:	['isCastId'],
-				label:		['isLabel','undefined'],
-				do:			['isCommandArray'],
-			},
-			cmdId:		'cmdOnEscape',
-		},
-		onResume: {
-			allow: ['STATE'],
-			param: {
-				onTick:		['isCastId'],
-				label:		['isLabel','undefined'],
-				do:			['isCommandArray'],
-			},
-			cmdId:		'cmdOnResume',
-		},
-		journal: {
-			allow: ['STATE','CMD'],
-			param: {
-				journal:	['isJournalEntry'],
-				done: 		['isJournalStage','undefined'],
-				start:		['isJournalStage','undefined'],
-				mark:		['isEntityId','undefined'],
-				complete:	['isBoolean','undefined'],
-				fail:		['isBoolean','undefined'],
-			},
-			cmdId: 		'cmdJournal',
-		},
-		pl: {
-			allow: ['CMD'],
-			param: {
-				pl:			['isDialog'],
-			},
-			cmdId:		'cmdPl',
-		},
-		me: {
-			allow: ['CMD','PICK'],
-			param: {
-				me:			['isDialog'],
-			},
-			cmdId:		'cmdMe',
-		},
-		if: {
-			allow: ['STATE','CMD'],
-			param: {
-				if:			['isConditional','isFlagId'],
-				do:			['isCommandArray'],
-				else:		['isCommandArray','undefined'],
-			},
-			cmdId:		'cmdIf',
-		},
-		choice: {
-			allow: ['CMD'],
-			param: {
-				choice:		['isDialog'],
-				do:			['isCommandArray'],
-			},
-			cmdId:		'cmdChoice',
-		},
-		ask: {
-			allow: ['CMD'],
-			param: {
-				ask:		['isDummy'],
-			},
-			cmdId:		'cmdAsk',
-		},
-		pick: {
-			allow: ['CMD','PICK'],
-			param: {
-				pick:		['isPickArray'],
-			},
-			cmdId:		'cmdPick',
-		},
-		change: {
-			allow: ['STATE','CMD','CONDITIONAL'],
-			param: {
-				change:		['isEntityId'],
-				gold:		['isNumber','undefined'],
-				give:		['isCastId','undefined'],
-				travelTo:	['isEntityId','undefined'],
-				talkTo:		['isEntityId','undefined'],
-			},
-			cmdId:		'cmdChange',
-		},
-		await: {
-			allow: ['CMD'],
-			param: {
-				await:		['isConditional','isFlagId'],
-			},
-			cmdId:		'cmdAwait',
-		},
-		goto: {
-			allow: ['CMD'],
-			param: {
-				goto:		['isStateId'],
-			},
-			cmdId:		'cmdGoto',
-		},
-		exit: {
-			allow: ['CMD'],
-			param: {
-				exit:		['isStateId','isNumber'],
-			},
-			cmdId:		'cmdExit',
-		},
-		run: {
-			allow: ['CMD'],
-			param: {
-				run:		['isLabelId'],
-			},
-			cmdId:		'cmdRun',
+			cmdFn: 'cmdPriority',
+			allow: ['DEF','CMD'],
+			commandKeys: {
+				priority:	['tPriority']
+			}
 		},
 		query: {
-			allow: ['CONDITIONAL'],
-			param: {
-				query:		['isCastId','isFlagId'],
-				isAt:		['isCastId','undefined'],
-				has:		['isCastId','undefined'],
-				hasState:	['isString','undefined']
+			cmdFn: 'cmdQuery',
+			allow: ['CONDITIONAL','FLAG'],
+			commandKeys: {
+				query: 		['tCastId','tFlagId','tJournalId'],
+				key:		['tString','tUndefined'],
+				eq:			['tString','tNumber','tBoolean','tUndefined'],
+				lt:			['tNumber','tUndefined'],
+				gt:			['tNumber','tUndefined'],
+				lte:		['tNumber','tUndefined'],
+				gte:		['tNumber','tUndefined'],
+				isAt:		['tCastId','tUndefined'],
+				has:		['tCastId','tUndefined'],
+				hasState:	['tString','tUndefined'],
+				stage:		['tString','tUndefined']
+			}
+		},
+		event: {
+			cmdFn: 'cmdEvent',
+			allow: ['STATE'],
+			commandKeys: {
+				event:		['tEventId'],
+				to:			['tCastId'],
+				label:		['tLabel','tUndefined'],
+				do:			'sCommandBlock',
 			},
-			cmdId:		'cmdQuery',
-		}
+		},
+		onEscape: {
+			cmdFn: 'cmdOnEscape',
+			allow: ['CMD'],
+			commandKeys: {
+				onEscape: 'sCommandBlock',
+			},
+		},
+		journal: {
+			cmdFn: 'cmdJournal',
+			allow: ['STATE','CMD'],
+			commandKeys: {
+				journal:	['tJournalId'],
+				done: 		['tJournalStage','tUndefined'],
+				start:		['tJournalStage','tUndefined'],
+				mark:		['tCastId','tUndefined'],
+				complete:	['tBoolean','tUndefined'],
+				fail:		['tBoolean','tUndefined'],
+			},
+		},
+		pl: {
+			cmdFn: 'cmdPl',
+			allow: ['CMD'],
+			commandKeys: {
+				pl:			['tDialog'],
+				do:			'sCommandBlock'
+			},
+		},
+		me: {
+			cmdFn: 'cmdMe',
+			allow: ['CMD','PICK'],
+			commandKeys: {
+				me:			['tDialog'],
+			},
+		},
+		say: {
+			cmdFn: 'cmdMe',
+			allow: ['CMD','PICK'],
+			commandKeys: {
+				say:		['tCastId'],
+				text:		['tDialog'],
+			},
+		},
+		if: {
+			cmdFn: 'cmdIf',
+			allow: ['STATE','CMD'],
+			commandKeys: {
+				if: 'sConditional',
+				do: 'sCommandBlock',
+				else: 'sCommandBlock',
+			},
+		},
+		choice: {
+			cmdFn: 'cmdChoice',
+			allow: ['CMD'],
+			commandKeys: {
+				choice:		['tDialog'],
+				do:			'sCommandBlock',
+			},
+		},
+		ask: {
+			cmdFn: 'cmdAsk',
+			allow: ['CMD'],
+			commandKeys: {
+				ask:		['tTrue'],
+			},
+		},
+		pick: {
+			cmdFn: 'cmdPick',
+			allow: ['CMD','PICK'],
+			commandKeys: {
+				pick:		['tPickArray'],
+			},
+		},
+		set: {
+			cmdFn: 'cmdSet',
+			allow: ['CMD','CONDITIONAL'],
+			commandKeys: {
+				set:		['tFlagId'],
+				value:		['tString','tNumber','tBoolean','tUndefined'],
+			},
+		},
+		change: {
+			cmdFn: 'cmdChange',
+			allow: ['STATE','CMD','CONDITIONAL'],
+			commandKeys: {
+				change:		['tCastId'],
+				key:		['tString','tUndefined'],
+				value:		['tString','tNumber','tBoolean','tUndefined'],
+				gold:		['tNumber','tUndefined'],
+				give:		['tCastId','tUndefined'],
+				travelTo:	['tCastId','tUndefined'],
+				talkTo:		['tCastId','tUndefined'],
+			},
+		},
+		await: {
+			cmdFn: 'cmdAwait',
+			allow: ['CMD'],
+			commandKeys: {
+				await: 'sConditional',
+			},
+		},
+		goto: {
+			cmdFn: 'cmdGoto',
+			allow: ['CMD'],
+			commandKeys: {
+				goto: 'sQuestStateTarget',
+			},
+		},
+		exit: {
+			cmdFn: 'cmdExit',
+			allow: ['CMD'],
+			commandKeys: {
+				exit: 'sQuestStateTarget',
+			},
+		},
+		deadend: {
+			cmdFn: 'cmdDeadend',
+			allow: ['CMD'],
+			commandKeys: {
+				deadend: ['tNumber']
+			}
+		},
+		run: {
+			cmdFn: 'cmdRun',
+			allow: ['CMD'],
+			commandKeys: {
+				run: 'tDeclareId',
+			},
+		},
+		isTimer: {
+			cmdFn: 'cmdIsTimer',
+			allow: ['FLAG'],
+			commandKeys: {
+				isTimer:	['tBoolean'],
+			},
+		},
+		timer: {
+			cmdFn: 'cmdTimer',
+			allow: ['CMD'],
+			commandKeys: {
+				timer:		['tFlagId'],
+				start:		['tNumber']
+			},
+		},
+		fn: {
+			cmdFn: 'cmdFn',
+			allow: ['FLAG'],
+			commandKeys: {
+				fn:			['tFunction'],
+				cache:		['tBoolean','tUndefined']
+			},
+		},
 	};
 	Object.assignIds(this.specHash);
 
-	this.findSpec = (cmd) => {
-		for( let commandId in this.specHash ) {
-			if( cmd[commandId] ) {
-				return this.specHash[commandId];
+	this.cmdFind = (cmd) => {
+		for( let commandId in this.cmdHash ) {
+			if( cmd[commandId] !== undefined ) {
+				return commandId;
 			}
 		}
 		return null;
@@ -1055,191 +756,385 @@ Script.Command = new function() {
 }
 
 Script.Validator = class {
-	constructor(world) {
+	constructor(world,manager) {
 		this.world = world;
+		this.manager = manager;
 		this.reset();
+		this.content = this.setupContent();
 	}
 	reset() {
+		this.definition = null;
 		this.cast = null;
 		this.flag = null;
-		this.code = null;
-		this.ip = null;
+		this.stateHash = null;
+		this.declareHash = {};
+
+		this.commandContext = {};
 
 		this.error = null;
 	}
+	clearCommandContext() {
+		for( let key in this.commandContext ) {
+			delete this.commandContext[key];
+		}
+	}
 	assert(value,text) {
 		if( !value ) {
-			throw text+' in '+this.trail.join('.');
+			let err = text+' in '+this.trail.join('.');
+			throw err;
 		}
 		return true;
 	}
 	test(value,text) {
 		if( !value ) {
-			this.error = this.error || text+' in '+this.trail.join('.');
+			console.assert(text);
+			this.error = this.error || text;
 			return false;
 		}
 		return true;
 	}
-	validateType(value,typeId,trail) {
-		switch( typeId ) {
-			case 'undefined':
-				return this.test( value===undefined, 'must be undefined' );
-			case 'isStateHash':
-				return this.test( Object.isObject(value), 'stateHash must contain objects' );
-			case 'isCastHash':
-				return this.test( Object.isObject(value), 'cast "'+trail+'" must be a hash' );
-			case 'isFlagHash':
-				return this.test( Object.isObject(value), 'flag "'+trail+'" must be a hash' );
-			case 'isStateDef':
-				return this.test( Array.isArray(value), 'state def "'+trail+'" must be a command list' );
-			case 'isCastDef':
-				return this.test( value===null || this.world.find(value), 'cast def "'+trail+':'+value+'" must be an entity id' );
-			case 'isCastId':
-				return this.test( this.cast[value] !== undefined, 'cast "'+value+'" not found' );
-			case 'isFlagId':
-				return this.test( this.flag[value] !== undefined, 'flag "'+value+'" not found' );
-			case 'isEntityId':
-				return this.test( this.world.find(value), 'entity "'+value+'" not found' );
-			case 'isState':
-				return this.test( this.statesHash[value] === undefined, 'state "'+value+'" not found' );
-			case 'isLabel':
-				let found = false;
-				for( let stateId in this.stateHash ) {
-					found = found || this.stateHash[stateId].label === value;
-				}
-				return this.test( found, 'label reference bad'+value );
-			case 'isPriority':
-				let priorityValues = { normal: 1, quest: 2 };
-				return this.test( priorityValues[value] !== undefined, 'bad priority '+value );
-			case 'isCommandArray':
-				return this.test( Array.isArray(value), 'command block must be array' );
-			case 'isJournalEntry':
-				this.journalId = value;
-				return this.test( Journal.Data[value] !== undefined );
-			case 'isJournalStage':
-				return this.test( Journal.Data[this.journalId][value] !== undefined );
-			case 'isBoolean':
-				return this.test( value===true || value===false );
-			case 'isNumber':
-				return this.test( Number.isFinite(value) );
-			case 'isFunction':
-				return this.test( typeof value === 'function' );
-			case 'isString':
-				return this.test( typeof value === 'string' );
-			case 'isDialog':
-				return this.test( typeof value === 'string' );
-			case 'isConditional':
-				return this.test( Array.isArray(value) );
-		}
-		// Type not found.
-		debugger;
+	getType(value) {
+		if( Array.isArray(value) ) return 'tArray';
+		if( Object.isObject(value) ) return 'tObject';
+		if( value === null ) return 'tNull';
+		return 't'+String.capitalize(typeof value);
 	}
-	validateParam( typeList, key, value, addMoreFn) {
-		let ok = false;
-		typeList.forEach( typeId => {
-			let isValid = this.validateType( value, typeId, key );
-			ok = ok || isValid;
-			if( isValid ) {
-				addMoreFn(typeId);
+
+	setupContent() {
+		let priorityValues = { normal: 1, quest: 2 };
+
+		let content = {};
+		content.tCastId   = value => this.test( this.cast[value] !== undefined, 'cast "'+value+'" not found' );
+		content.tFlagId   = value => this.test( this.flag[value] !== undefined, 'flag "'+value+'" not found' );
+		content.tEventId  = value => this.test( Script.Command.eventIdHash[value] !== undefined, 'eventId "'+value+'" not found' );
+		content.tEntityId = value => this.test( this.world.find(value), 'entity "'+value+'" not found' );
+		content.tTrue     = value => this.test( value===true, 'must be true' );
+		content.tBoolean  = value => this.test( value===true || value===false, 'must be boolean' );
+		content.tNumber   = value => this.test( Number.isFinite(value), 'must be number' );
+		content.tFunction = value => this.test( typeof value === 'function', 'must be function' );
+		content.tString   = value => this.test( typeof value === 'string', 'must be string' );
+		content.tDialog   = value => this.test( typeof value === 'string', 'dialog must be string' );
+		content.tPriority = value => this.test( priorityValues[value] !== undefined, 'bad priority '+value );
+		content.tDeclareId  = value => {
+			return this.test( this.declareHash[value] !== undefined, 'declrare "'+value+'" not found' );
+		}
+		content.tStateId  = value => {
+			return this.test( this.stateHash[value] !== undefined, 'state "'+value+'" not found' );
+		}
+		content.tQuestStateId = value => {
+			let def = this.manager.getDefinition(value.quest);
+			if( !this.test( def, 'Quest "'+value.quest+'" does not exist' ) ) {
+				return;
 			}
-		});
-		return ok;
-	}
-	validateCommand(allowId,cmd) {
-		this.assert( Object.isObject(cmd), 'All commands must be objects.' );
-		let spec = Script.Command.findSpec(cmd);
-		this.assert( spec, 'Unknown command '+JSON.stringify(cmd) );
-		this.assert( spec.allow.includes(allowId), 'Keyword '+spec.id+' not allowed in '+allowId );
-
-		for( let paramId in cmd ) {
-			this.assert( spec.param[paramId], "Command "+spec.id+" does not support key "+paramId );
+			return this.test( def.stateHash[value.state] !== undefined, 'state "'+value.state+'" not found' );
+		}
+		content.tLabel    = value => {
+			let found = false;
+			for( let stateId in this.stateHash ) {
+				found = found || this.stateHash[stateId].label === value;
+			}
+			return this.test( found, 'label reference bad'+value );
+		}
+		content.tJournalId = value => {
+			this.commandContext.journalId = value;
+			return this.test( Journal.Data[value] !== undefined );
+		}
+		content.tJournalStage = value => {
+			if( this.commandContext.journalId === undefined ) {
+				this.assert( 'No journal: specified. Must specify journal: first.' );
+			} 
+			return this.test( Journal.Data[this.commandContext.journalId][value] !== undefined );
 		}
 
-		this.validateHash( allowId, spec.param, paramId=>cmd[paramId], paramId=>spec.param[paramId] );
+		return content;
 	}
-	validateHash(allowId,hash,valueFn,typeListFn) {
-		let more = [];
+
+	testContent(typeId,value) {
+		console.assert( this.content[typeId] );
+		return this.content[typeId](value);
+	}
+
+	checkHash(hash,structId) {
+		let spec = Script.Command.specHash[structId];
 		for( let key in hash ) {
-			let value    = valueFn(key);
-			let typeList = typeListFn(key);
-			this.error   = null;
-			let ok = this.validateParam( typeList, key, value, typeId=>{
-				if( Script.Command.typeDetails[typeId] ) {
-					more.push( typeId, value, key );
-				}
-			});
-			if( !ok ) {
-				this.assert( false, this.error );
-			}
-		}
-		this.validateCode(more);
-	}
-	validateCommandList(allowId,cmdList) {
-		for( let ip=0 ; ip<cmdList.length ; ++ip ) {
-			let cmd = cmdList[ip];
-			this.validateCommand( allowId, cmd );
+			let typeId = this.getType(hash[key]);
+			this.assert( spec[typeId], "Unsupported type "+typeId );
+			//console.log('freeform is',key, spec.id+'.'+typeId );
+			// id: sCastDef
+			// tNull: true
+			// tString: entityId
+			this.validateKV( key, hash[key], spec[typeId] );
 		}
 	}
-	validateCode(more) {
-		while( more.length ) {
-			let codeType = Script.Command.typeDetails[more.shift()];
-			let value    = more.shift();
-			let trail    = more.shift();
 
-			this.trail.push( trail );
+	checkCommand(commandHash,cmdId) {
+		this.assert( cmdId, 'Unknown command '+JSON.stringify(commandHash) );
+		this.trail.push(cmdId);
+		console.assert( cmdId );
+		console.assert( Script.Command.cmdHash[cmdId] );
+		console.assert( Script.Command.cmdHash[cmdId].commandKeys );
+		// This is the spec that describes the contents of this commandHash.
+		let validCommands = Script.Command.cmdHash[cmdId].commandKeys;
+		this.clearCommandContext();
+		for( let key in commandHash ) {
+			if( key.startsWith('__') ) {
+				continue;
+			}
+			let structId = validCommands[key];
+			this.assert( structId, "Invalid key "+key );
 
-			if( codeType.checker == 'command' ) {
-				this.validateCommand( codeType.is, value );
+			// A command leads to its type, or a terminal type validation
+			if( Script.Command.specHash[structId] ) {
+				this.validateKV( key, commandHash[key], structId );
 			}
-			if( codeType.checker == 'hash' ) {
-				this.validateHash( codeType.is, value, key=>value[key], key=>codeType.memberType );
+			else {
+				this.validateTerminus( commandHash[key], structId );
 			}
-			if( codeType.checker == 'commandList' ) {
-				this.validateCommandList( codeType.is, value );
-			}
-			this.trail.pop( trail );
 		}
+		this.trail.pop();
 	}
+
+	validateTerminus( value, structId ) {
+		// Is this just a reference to a another spec? If so, resolve it.
+		if( structId === true ) {
+			return;
+		}
+
+		// List of terminal types
+		if( Array.isArray(structId) ) {
+			let ok = false;
+			for( let i in structId ) {
+				ok = ok || this.testContent( structId[i], value );
+			}
+			this.assert( ok, "Wrong type. Must be "+structId.join(', ') );
+			return;
+		}
+
+		// Singular type. Might require iteration, or not.
+		if( this.content[structId] ) {
+			this.error = null;
+			let ok = this.testContent( structId, value );
+			this.assert( ok, this.error );
+			return;
+		}
+
+		let typeId = this.getType(value);
+		if( ['tFunction','tString','tNumber','tBoolean'].includes(typeId) ) {
+			debugger;
+			return;
+		}
+
+		this.assert( false, "unhandled type "+structId );
+	}
+
+
+//===============================================
+//===============================================
+//===============================================
+//===============================================
+	validateKVInner(value,structId) {
+
+		let typeId = this.getType(value);
+
+		console.log('val',this.trail.join('.'),':',JSON.stringify(value).substr(0,30));
+		console.log('   as',structId);
+
+		if( typeId === 'tArray' ) {
+			// What type is each record in the array?
+			let spec = Script.Command.specHash[structId];
+			console.assert( spec );
+			console.log("ARRAY START",spec);
+			for( let i=0 ; i<value.length ; ++i ) {
+				let record   = value[i];
+				let structId = spec[this.getType(record)];
+				this.validateKV( i+1, record, structId );
+			}
+			return;
+		}
+
+		if( typeId === 'tObject' ) {
+			if( Script.Command.cmdHash[structId] ) {
+				this.checkCommand( value, structId );
+				return;
+			}
+
+			console.assert( typeof structId === 'string' );
+			if( structId.startsWith('commandType:') ) {
+				let cmdId = Script.Command.cmdFind(value);
+				this.checkCommand(value,cmdId);
+				return;
+			}
+
+			let temp = Script.Command.specHash[structId];
+			if( temp && temp.thisObjectIsKeyValuePairs ) {
+				let hashStructId = Script.Command.specHash[structId].tObject;
+				this.checkHash( value, hashStructId );
+				return;
+			}
+		}
+
+		if( Script.Command.specHash[structId] ) {
+			let spec = Script.Command.specHash[structId];
+			console.assert( spec[typeId] );
+			this.validateKVInner( value, spec[typeId] );
+			return;
+		}
+
+		return this.validateTerminus( value, structId );
+
+	}
+
+	validateKV(key,value,structId) {
+		this.trail.push(key);
+		this.validateKVInner(value,structId);
+		this.trail.pop();
+	}
+
 	validate(definition) {
 		this.definition = definition;
 		this.cast = definition.cast || {};
 		this.flag = definition.flag || {};
+		this.declareHash = definition.declareHash || {};
 		this.stateHash = definition.stateHash || {};
 		this.ip = [0];
 		this.trail = [];
 		this.error = null;
 
-		this.validateCode([
-			'isDefinition',
+		this.validateKV(
+			definition.id,
 			definition,
-			definition.id
-		]);
+			'definition'
+		);
 	}
 }
 
-Script.Definition = class {
-	constructor(data) {
-		console.assert( data.id );
-		Object.assign( this, data );
+Script.Query = new class {
+	constructor() {
+		this.process = null;
+	}
+	testOne(process,anyId,param) {
+		this.process = process;
+		let result = true;
+		let f = this.process.flag(anyId);
+		if( f ) {
+			if( f.isTimer ) {
+				return f.isComplete;
+			}
+			if( f.fn ) {
+				return f.fn(process);
+			}
+			if( f.test ) {
+				return this.testAny(process,f.test,{});
+			}
+			debugger;
+			return result;
+		}
+		let entity = this.process.cast(anyId);
+		if( entity ) {
+			if( param.key !== undefined ) {
+				result = result && this.key(entity,param.key,param);
+			}
+			if( param.isAt !== undefined ) {
+				result = result && this.isAt(entity,param.isAt);
+			}
+			if( param.has !== undefined ) {
+				result = result && this.has(entity,param.has);
+			}
+			if( param.hasState !== undefined ) {
+				result = result && this.hasState(entity,param.hasState);
+			}
+			debugger;
+			return result;
+		}
+		debugger;
+		return result;
+	}
+	testList(process,conList,param) {
+		let result = true;
+		let i = 0;
+		while( result && i < conList.length ) {
+			result = result && this.testOne(process,conList[i],{});
+			++i
+		}
+		return result;
+	}
+	testAny(process,anyId,param) {
+		if( typeof con == 'string' ) {	// must be a flag to check
+			return this.testOne(process,anyId,{});
+		}
+		if( Object.isObject(anyId) ) {
+			let queryId = anyId.query;
+			return this.testOne(process,queryId,anyId);
+		}
+		if( Array.isArray(anyId) ) {
+			return this.testList(process,anyId);
+		}
+		debugger;
+	}
+	compare(lvalue,param) {
+		if( param.eq  ) return lvalue == param.eq;
+		if( param.lt  ) return lvalue <  param.eq;
+		if( param.gt  ) return lvalue >  param.eq;
+		if( param.lte ) return lvalue <= param.eq;
+		if( param.gte ) return lvalue >= param.eq;
+		return lvalue;
+	}
+	key(entity,key,param) {
+		let lvalue = entity.key;
+		return this.compare(lvalue,param);
+	}
+	isAt(entity,siteId) {
+		let site   = this.process.world.find(siteId);
+		return Distance.within(
+			entity.circle.x-site.circle.x,
+			entity.circle.y-site.circle.y,
+			entity.circle.radius+site.circle.radius
+		);
+	}
+	has(entity,itemId) {
+		return this.entity.inventory.find( item=>item.id==itemId );
+	}
+	hasState(entity,state) {
+		return entity.state == state;
 	}
 }
 
 Script.Process = class {
-	constructor( callerId, entry, stateId, eventId, entityId, labelId, lines ) {
-		this.id       = Date.makeUid();
-		this.callerId = callerId;
+	constructor( callerId, entry, stateId, eventId, entityId, labelId, cmdList ) {
+		this.id       = entry.id+'.'+(eventId?eventId+'.':'')+(entityId?entityId+'.':'')+Date.makeUid();
+
+		console.assert( entry.isEntry );
 		this.entry    = entry;
+		this.callerId = callerId;
 		this.eventId  = eventId;
+
+		console.assert( entityId===null || entry.world.find(entityId) );
 		this.entityId = entityId;
 		this.labelId  = labelId;
-		this.lines    = lines;
 		this.stateId  = stateId;
+
+		console.assert( Array.isArray(cmdList) );
+		this.cmdList  = cmdList;
 		this.ip       = 0;
+		this.stack    = [];
 		this.active   = false;
-		this.context  = { process: this, cmd: null };
+		this.$stateChange = null;
+		this.$exitDialog  = false;
+
+	}
+
+	// QUICK ACCESS VARS
+	get name() {
+		return (this.labelId?this.labelId+':':'')+this.entry.id+'.'+this.stateId+'.'+this.eventId+'.'+this.entityId;
 	}
 	get observer() {
 		return this.entry.manager.observer;
+	}
+	get world() {
+		return this.observer.world;
+	}
+	get player() {
+		return this.observer
 	}
 	get dialog() {
 		return this.observer.dialog;
@@ -1247,50 +1142,100 @@ Script.Process = class {
 	get manager() {
 		return this.entry.manager;
 	}
+
+	/// STACK
+	stackPush(cmdList) {
+		this.ip += 1;	// So that a pop puts us back on the right line.
+		this.stack.push(this.cmdList);
+		this.stack.push(this.ip);
+		this.cmdList = cmdList;
+		this.ip = -1;
+	}
+	stackPop() {
+		console.assert(this.stack.length > 0);
+		this.ip = this.stack.pop();
+		this.cmdList = this.stack.pop();
+	}
+/*
+	resolve(n) {
+		if( typeof n === 'function' ) {
+			return n(this);
+		}
+		if( typeof n === 'string' ) {
+			if( this.entry.castExists(n) ) {
+				return this.world.find(this.entry.castGet(n));
+			}
+			if( this.entry.flagExists(n) ) {
+				return this.entry.flagGet(n);
+			}
+			let entity = this.world.find(n);
+			if( entity ) {
+				return entity;
+			}
+			return n;
+		}
+		return n;
+	}
+*/
+	// CAST
+	cast(n) {
+		return this.entry.cast(n);
+	}
+	castExists(n) {
+		return this.entry.castExists(n);
+	}
+
+	// FLAG
+	flag(n) {
+		return this.entry.flag(n);
+	}
+	flagExists(n) {
+		return this.entry.flagExists(n);
+	}
+
+
+	// HELPERS
 	activate(state=true) {
 		this.active = state;
 	}
-	addProcessHelper(eventId,param) {
+
+	cmdEvent(param) {
+		let castId   = param.to;
+		let eventId  = param.event;
+		let entityId = this.cast(castId).id;
 		let process = new Script.Process(
 			this.id,
 			this.entry,
 			this.stateId,
 			eventId,
-			param[eventId],
+			entityId,
 			param.label,
 			param['do']
 		);
 		this.entry.manager.addProcess(process);
 		return Script.Result.ADVANCE;
 	}
-	cmdOnTick(context,param) {
-		return this.addProcessHelper('onTick',param);
+	cmdOnEscape(param) {
+		this.observer.dialog.addSay( this.id, param.me );
+		return Script.Result.END;
 	}
-	cmdOnTalk(context,param) {
-		return this.addProcessHelper('onTalk',param);
-	}
-	cmdOnEscape(context,param) {
-		return this.addProcessHelper('onEscape',param);
-	}
-	cmdOnResume(context,param) {
-		return this.addProcessHelper('onResume',param);
-	}
-	cmdJournal(context,param) {
+	cmdJournal(param) {
 		let journal = this.observer.journal;
 		let journalId = param.journal;
 		console.assert( Journal.Data[journalId] );
-		let journalTitle = String.unCamel( journalId );
+		let journalTitle = String.uncamel( journalId );
 
 		journal.add( journalId, journalTitle );
 
 		if( param.done !== undefined ) {
-			journal.stageSetDone( journalId, param.done, JournalData[journalId][param.done] );
+			journal.stageSetDone( journalId, param.done, Journal.Data[journalId][param.done] );
 		}
 		if( param.start !== undefined ) {
-			journal.stageAdd( journalId, param.start, JournalData[journalId][param.start] );
+			journal.stageAdd( journalId, param.start, Journal.Data[journalId][param.start] );
 		}
 		if( param.mark !== undefined ) {
-			journal.mark( journalId, param.mark );
+			let entity = this.cast(param.mark);
+			journal.mark( journalId, entity );
 		}
 		if( param.complete ) {
 			journal.setComplete( journalId );
@@ -1300,67 +1245,176 @@ Script.Process = class {
 		}
 		return Script.Result.ADVANCE;
 	}
-	cmdPl(context,param) {
-		this.observer.dialog.addReply( this.id, this.pl );
+	cmdPl(param) {
+		this.observer.dialog.addReply( this.id, param.pl );
 		return Script.Result.ADVANCE | Script.Result.AWAIT_REPLY;
 	}
-	cmdMe(context,param) {
+	cmdMe(param) {
 		console.assert( !this.dialog.hasSay );
-		this.observer.dialog.addSay( this.id, this.me );
+		this.observer.dialog.addSay( this.id, param.me );
 		return Script.Result.ADVANCE;
 	}
-	cmdChoice(context,param) {
-		this.observer.dialog.addReply( this.id, this.pl, this['do'] );
+	cmdChoice(param) {
+		this.observer.dialog.addReply( this.id, param.choice, param['do'] );
 		return Script.Result.ADVANCE;
 	}
-	cmdAsk(context,param) {
+	cmdAsk(param) {
 		return Script.Result.ADVANCE | Script.Result.AWAIT_REPLY;
 	}
+	cmdQuery(param) {
+		console.assert(false);
+	}
+	cmdAwait(param) {
+		let result = Script.Query.testAny(this,param.await,param);
+		if( !result ) {
+			return Script.Result.AWAIT_CONDITION;
+		}
+		return Script.Result.ADVANCE;
+	}
+	cmdTimer(param) {
+		console.assert( Number.isFinite(param.start) );
+		let flagId = param.timer;
+		let timer  = this.entry.flag[flagId];
+		console.assert( timer.isTimer );
+		timer.timeLeft = param.start;
+		timer.isComplete = false;
+		timer.isRunning = true;
+		return Script.Result.ADVANCE;	
+	}
+	cmdIf(param) {
+		let $if		= param['if'];
+		let $then	= param['do'];
+		let $else	= param['else'];
+		if( Script.Query.testAny(this,$if,param) ) {
+			this.stackPush($then);
+		}
+		else if( $else ) {
+			this.stackPush($else);
+		}
+		return Script.Result.ADVANCE;
+	}
+	cmdSet(param) {
+		let flagId = param.set;
+		this.entry.flagHash[flagId] = param.value===undefined ? true : param.value;
+	}
+	cmdChange(param) {
+		let castId = param.change;
+		let entity = this.cast(castId);
 
-
-/*
-	- if: any conditional... do: ... else: ...
-	- choice: n adds a choice to the speech's list of player choices. can combine with "if"
-	- ask: n stops adding choices and pauses execution until a choice is made
-	- pick: choose one option for an array
-	- change(anyId) - pick as target and does an operation upon them
-		- ops are gold/amount, give/itemId, travelTo/siteId, talkTo/whom etc.
-	- await: [ list of conditionals ] all must be true to continue execution
-	  we can even check whether, for example, a character is actually heading for a location...
-	- goto 'state'. Clears the EVENT array for current state. (must always end a sequence)
-	- exit 'state'  Just like goto, except the leaves the dialog
-	- run 'label'. Runs the label named.
-*/
+		if( param.key ) {
+			let value = param.value === undefined ? true : param.value;
+			entity[param.key] = value;
+		}
+		if( Number.isFinite(param.gold) ) {
+			entity.gold += param.gold;
+		}
+		if( param.give ) {
+			let item = this.world.find(param.give);
+			item.takeFrom(item.owner);
+			item.giveTo(entity);
+		}
+		if( param.travelTo ) {
+			let location = this.world.find(param.travelTo);
+			entity.destination = location.circle;
+		}
+		if( param.talkTo ) {
+			debugger;
+		}
+		return Script.Result.ADVANCE;	
+	}
+	jumpTo(target) {
+		let entryId = Object.isObject(target) ? target.quest : this.entry.id;
+		let stateId = Object.isObject(target) ? target.state : target;
+		this.$stateChange = {
+			entryId: entryId,
+			stateId: stateId
+		}
+	}
+	cmdGoto(param) {
+		this.jumpTo(param.goto);
+		return Script.Result.END;
+	}
+	cmdExit(param) {
+		this.$exitDialog = true;
+		if( !Number.isFinite(param.exit) ) {
+			this.jumpTo(param.exit);
+		}
+		return Script.Result.END;
+	}
+	cmdRun(param) {
+		debugger;
+		let codeBlock = this.declareHash[param.run];
+		this.stackPush(codeBlock);
+	}
+	cmdDeadend(param) {
+		return Script.Result.POP;
+	}
 	execute() {
-		this.context.cmd = this.lines[this.ip];
-		let spec = Script.Command.findSpec( context.cmd );
+		console.assert( this.ip>=0 && this.ip<this.cmdList.length );
+		let cmd = this.cmdList[this.ip];
+		let spec = Script.Command.findSpec( cmd );
 		console.assert(spec);
-		let commandId   = spec.cmdId;
-		let result = this[commandId](context,this.context.cmd);
+		let result = this[spec.cmdId](cmd);
 		return result;
 	}
 	executeAll() {
-		while( this.ip < this.lines.length ) {
-			this.execute();
+		while( this.ip < this.cmdList.length ) {
+			let result = this.execute();
+			if( !(result & Script.Result.ADVANCE) ) {
+				debugger;
+			}
 			this.ip += 1;
 		}
 		this.complete();
 	}
 	executeUntilStop() {
-		let result = Script.Result.ADVANCE;
-		while( result & Script.Result.ADVANCE ) {
-			result = execute();
-		}
+		let result;
+		do {
+			result = this.execute();
+			if( result & Script.Result.POP ) {
+				debugger;
+				this.stackPop();
+			}
+			if( result & Script.Result.ADVANCE ) {
+				this.ip += 1;
+				while( this.ip >= this.cmdList.length ) {
+					if( this.stack.length <= 0 ) {
+						result = Script.Result.END;
+						break;
+					}
+					this.stackPop();
+				}
+			}
+		} while( result & Script.Result.ADVANCE );
 		if( result & Script.Result.END ) {
 			this.complete();
 		}
+		if( this.$stateChange ) {
+			console.assert( result & Script.Result.END );
+			this.manager.setEntryState(
+				this.$stateChange.entryId,
+				this.$stateChange.stateId,
+				this.eventId,
+				this.entityId
+			);
+			if( this.$exitDialog ) {
+				this.manager.exitDialog();
+			}
+		}
+		return {
+			result: result,
+			stateChange: this.$stateChange,
+			exitDialog: this.$exitDialog
+		}
 	}
 	complete() {
+		this.isComplete = true;
 	}
-	tick() {
-		if( this.eventId == 'onTick' ) {
-			this.executeUntilStop();
+	run() {
+		if( this.isComplete ) {
+			return false;
 		}
+		return this.executeUntilStop();
 	}
 }
 
@@ -1368,8 +1422,6 @@ Script.State = class {
 	constructor(entry,stateId,labelId) {
 		this.stateId  = stateId;
 		this.labelId  = labelid;
-		this.onEscape = null;
-		this.onResume = null;
 		this.onTalk   = {};
 		this.onTick   = {};
 	}
@@ -1377,87 +1429,255 @@ Script.State = class {
 
 Script.Entry = class {
 	constructor( manager, definition ) {
-		this.id = definition.id;
 		this.manager = manager;
 		this.definition = definition;
+		this.castHash = null;
+		this.flagHash = null;
+		this.timerHash = {};
 		this.stateId = null;
 		this.stateProcess = null;
 	}
-	get stateHash() {
-		return this.definition.stateHash;
+
+	// ACCESS FUNCTIONS
+	get id() {
+		return this.definition.id;
 	}
-	setState(context,newStateId) {
-		if( this.stateId == newStateId ) {
+	get isEntry() {
+		return true;
+	}
+	get world() {
+		return this.manager.observer.world;
+	}
+
+	// CAST
+	cast(n) {
+		let value;
+		if( this.castHash[n] !== undefined ) {
+			value = this.castHash[n];
+		}
+		else {
+			value = this.definition.cast[n];
+		}
+		console.assert( value !== undefined );
+		if( typeof value === 'function' ) {
+			value = value(this);
+		}
+		return this.world.find(value);
+	}
+	castExists(n) {
+		return this.cast(n) !== undefined;
+	}
+
+	// FLAG
+	flag(n) {
+		let value;
+		if( this.flagHash[n] !== undefined ) {
+			value = this.flagHash[n];
+		}
+		else {
+			value = this.definition.flag[n];
+		}
+		console.assert( value !== undefined );
+		if( typeof value === 'function' ) {
+			value = value(this);
+		}
+		return value;
+	}
+	flagExists(n) {
+		return this.flag(n) !== undefined;
+	}
+
+	// TIMER
+	setTimer(timerId,duration) {
+	}
+
+	castAssign(injectCastHash) {
+		this.castHash = Object.assign( {}, injectCastHash );
+	}
+	flagAssign(injectFlagHash) {
+		// For now we will assume that all flags just get recalculated
+		// every time.
+		this.flagHash = Object.assign( {}, injectFlagHash );
+	}
+	generate(genSpec) {
+		console.assert(genSpec.cast && genSpec.cast.giver);
+		this.castAssign(genSpec.cast || {});
+		this.flagAssign(genSpec.flag || {});
+	}
+	setState(newStateId) {
+		if( !this.cast ) {
+		}
+		if( this.stateId === newStateId ) {
 			return true;
 		}
+
+		if( this.stateId ) {
+			this.manager.killProcess( this.id, this.stateId );
+		}
+
+		console.logScript( this.id+'.state = '+newStateId );
 		// At some point this needs to scan the process list and REMOVE all
 		// processes that are not the incoming state.
 		this.stateId = newStateId;
-		let commandList = this.stateHash[this.stateId];
+		this.flag.state = this.stateId;
+		let commandList = this.definition.stateHash[this.stateId];
 		console.assert( Array.isArray( commandList ) );
-		context.stateId = this.stateId;
 
 		this.stateProcess = new Script.Process( this.id, this, this.stateId, null, null, null, commandList );
 		this.stateProcess.executeAll();
 	}
+	tickTimers() {
+		for( let flagId in this.flagHash ) {
+			let n = this.flagHash[flagId];
+			if( !n.isTimer || !n.isRunning ) {
+				continue;
+			}
+			console.assert(Number.isFinite(n.timeLeft));
+			n.timeLeft -= 1;
+			if( n.timeLeft <= 0 ) {
+				n.timeLeft = 0;
+				n.isComplete = true;
+				n.isRunning = true;
+			}
+		}
+	}
 }
+
+Script.Definition = class {
+	constructor(data) {
+		console.assert( data.id );
+		Object.assign( this, data );
+
+		this.cast = this.cast || {};
+		this.cast.player = 'player';
+		this.flag = this.flag || {};
+		this.flag.state = false;
+		this.flag.talkResumed = false;
+		this.__giverList = {};
+
+		for( let key in this.flag ) {
+			if( typeof flag === 'function' ) {
+				flag[key] = {
+					readonly: true,
+					value: flag[key]
+				}
+			}
+		}
+	}
+	__testGeneration() {
+		// For now we only have the VERY SIMPLEST possible generator.
+		let entityId = this.generator;
+		console.assert( typeof entityId === 'string' );
+		if( this.__giverList[entityId] ) {
+			return;
+		}
+		this.__giverList[entityId] = true;
+		return {
+			cast: {
+				giver: entityId
+			}
+		}
+	}
+}
+
 
 
 Script.Manager = class {
 	constructor(validator) {
 		this.observer       = null;
-		this.definitionList = [];
-		this.entryList      = [];
+		this.definitionList = new ListManager([]);
+		this.entryList      = new ListManager([]);
 		this.processList    = new ListManager([]);
-		this.validator      = validator;
+		this.secondAccumulator = 0;
 	}
 	setObserver(observer) {
 		this.observer = observer;
 	}
+	getEntry(entryId) {
+		return this.manager.entryList.find( e=>e.id==entryId );
+	}
+	getDefinition(definitionId) {
+		return this.definitionList.find(d=>d.id==definitionId);
+	}
 	addDefinition( definitionRaw ) {
+		console.logScript( 'add definition', definitionRaw.id );
 		let definition = new Script.Definition( definitionRaw );
 		this.definitionList.push( definition );
-
-		// For now we are just making static versions of everything, but
-		// in future whenever mayGive applies to a person we should make
-		// a Script.Entry for them.
-		this.entryList.push( new Script.Entry( this, definition ) );
 	}
-	addProcess( process ) {
-		this.processList.push( process );
-	}
-	scanEntries() {
-		this.entryList.forEach( entry => {
-			if( !entry.stateId ) {
-				entry.setState( 'BEGIN' );
-			}
-		});
-	}
-	scanDefinitions(definitionHash) {
-		Object.each( definitionHash, (definition) => {
-			definition.cast = definition.cast || {};
-			definition.flag = definition.flag || {};
-			definition.cast.player = 'player';
-		});
-		Object.each( definitionHash, (definition) => {
-			this.validator.validate(definition);
-		});
+	addDefinitionHash(definitionHash) {
 		Object.each( definitionHash, (definition) => {
 			this.addDefinition( definition );
 		});
 	}
-	onTalk() {
-		let inDialog = this.observer.dialog && this.observer.dialog.speaker.id==this.entityId;
-		if( inDialog ) {
-			this.processList.traverse( process => {
-				process.tick(dt);
-			});
-		}
-	}
-	tick(dt) {
-		this.processList.traverse( process => {
-			process.tick(dt);
+	validateDefinitions(validator) {
+		this.definitionList.traverse( definition => {
+			validator.validate(definition);
 		});
+	}
+	killProcess( entryId, stateId ) {
+		let n = this.processList.remove( process => process.entry.id==entryId && process.stateId==stateId );
+		debugger;
+	}
+	addProcess( process ) {
+		console.logScript( 'add process', process.name );
+		this.processList.push( process );
+	}
+	scanGenerators() {
+		this.definitionList.traverse( definition => {
+			let genSpec = definition.__testGeneration();
+			if( !genSpec ) {
+				return;
+			}
+			let entry = new Script.Entry( this, definition );
+			this.entryList.add( entry );
+
+			debugger;
+			entry.generate(genSpec);
+		});
+	}
+	setEntryState(entryId,stateId) {
+		let entry = this.getEntry(entryId);
+		// At some point, if the entry is not found, we might
+		// instantiate it. Someday...
+		console.assert( entry );
+		console.assert( entry.definition.stateHash[stateId] );
+		entry.setState( stateId );
+	}
+	exitDialog() {
+		guiMessage('untalkPerson');
+	}
+	beginAsNeeded() {
+		this.entryList.traverse( entry => {
+			if( !entry.stateId && entry.definition.stateHash['BEGIN'] ) {
+				entry.setState( 'BEGIN' );
+			}
+		});
+	}
+	collect(eventId,filterFn) {
+		let list = [];
+
+		this.processList.traverse( process => {
+			if( process.eventId == eventId && filterFn(process) ) {
+				list.push(process);
+			}
+		});
+
+		return list;
+	}
+	eventTalk(speaker) {
+		let list = this.collect('talk',p=>p.entityId==speaker.id);
+		list.forEach( p=>p.run() );
+	}
+	eventTick(dt) {
+		this.beginAsNeeded();
+		let list = this.collect('tick',p=>true);
+		list.forEach( p=>p.run() );
+
+		this.secondAccumulator += dt;
+		while( this.secondAccumulator >= 1.0 ) {
+			this.entryList.traverse( entry => entry.tickTimers() );
+			this.secondAccumulator -= 1.0;
+		}
 	}
 }
 

@@ -47,6 +47,10 @@ class Person {
 		}
 	}
 
+	get world() {
+		return this.community.world;
+	}
+
 	set gender(value) {
 		console.assert( value =='M' || value == 'F' );
 		console.assert( this._gender === undefined );
@@ -476,7 +480,7 @@ Person.Text = class {
 		return skillLevelName[Math.floor(this.person.skillAt(this.person.jobType.id))];
 	}
 	get skillShort() {
-		return 's'+this.skillAt(this.person.jobType.id)
+		return 's'+this.person.skillAt(this.person.jobType.id)
 	}
 	get job() {
 		return this.isMinor ? this.childJob : this.person.jobType.name;

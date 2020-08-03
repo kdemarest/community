@@ -235,6 +235,9 @@ Habit.Manager = class {
 	}
 
 	tick(dt) {
+		if( this.person.noHabits ) {
+			return;
+		}
 		if( !this.everRun ) {
 			let d = this.destination;
 			let pos = {x:0,y:0};

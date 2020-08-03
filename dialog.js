@@ -11,9 +11,8 @@ Dialog.Manager = class {
 	constructor(observer,speaker) {
 		this.observer  = observer;
 		this.speaker   = speaker;
-		this.questHash = Quest.Determine(speaker);
-		this.questId   = null;
 		this.reset();
+		this.observer.world.scriptManager.eventTalk(speaker);
 	}
 	reset() {
 		this.say = null;
@@ -48,6 +47,8 @@ Dialog.Manager = class {
 		this.questId = reply.quest.id;
 		reply.quest.select(reply);
 		this.lastSay = reply.say || this.lastSay;
+		this.reset();
+		this.observer.world.scriptManager.eventTalk(speaker);
 	}
 };
 

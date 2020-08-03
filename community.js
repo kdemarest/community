@@ -42,6 +42,11 @@ class Community {
 	get aspect() {
 		return this.aspectHash.hash;
 	}
+
+	get personRadius() {
+		let personSizeCompareToSinglePersonHouse = 0.5;
+		return this.unitCircle.radius*personSizeCompareToSinglePersonHouse;
+	}
 	productionForAspect(aspectId) {
 		let total = this.sum( person => person.productionForAspect(aspectId) );
 		return total;
